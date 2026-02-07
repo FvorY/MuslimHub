@@ -1,7 +1,7 @@
 {
-  "name": "MuslimHub1",
+  "name": "MuslimHub",
   "integrations": {
     "capacitor": {}
   },
-  "type": "vue-vite"
+  "type": "vue"
 }

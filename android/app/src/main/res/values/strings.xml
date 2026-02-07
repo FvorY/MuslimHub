@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MuslimHub</string>
+    <string name="title_activity_main">MuslimHub</string>
+    <string name="package_name">com.muslimhub.app</string>
+    <string name="custom_url_scheme">com.muslimhub.app</string>
+</resources>
