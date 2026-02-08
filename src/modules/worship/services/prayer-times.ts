@@ -8,6 +8,7 @@ export interface PrayerTimes {
     ashar: string;
     maghrib: string;
     isya: string;
+    imsyak: string;
     date: string;
     city?: string; // City name
 }
@@ -40,6 +41,7 @@ export const PrayerTimeService = {
                 ashar: timings.Asr,
                 maghrib: timings.Maghrib,
                 isya: timings.Isha,
+                imsyak: timings.Imsak,
                 date: today,
                 city: 'Auto Detected'
             };

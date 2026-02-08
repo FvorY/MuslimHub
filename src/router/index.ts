@@ -60,6 +60,14 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/modules/tools/views/RamadanPage.vue')
       },
       {
+        path: 'tools/asmaul-husna',
+        component: () => import('@/modules/tools/views/AsmaulHusnaPage.vue')
+      },
+      {
+        path: 'tools/imsyak',
+        component: () => import('@/modules/tools/views/ImsyakPage.vue')
+      },
+      {
         path: 'settings',
         component: () => import('@/modules/settings/views/SettingsTab.vue')
       }

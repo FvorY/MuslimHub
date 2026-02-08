@@ -20,7 +20,7 @@
               <ion-icon :icon="calculator"></ion-icon>
             </div>
             <div class="card-content">
-              <h3>Zakat Calculator</h3>
+              <h3>{{ $t('tools.zakat_calculator') }}</h3>
               <p>Hitung kewajiban zakat mal dan penghasilan</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
@@ -31,8 +31,30 @@
               <ion-icon :icon="moon"></ion-icon>
             </div>
             <div class="card-content">
-              <h3>Ramadan Companion</h3>
+              <h3>{{ $t('tools.ramadan_companion') }}</h3>
               <p>Pantau progres puasa dan amalan Ramadan</p>
+            </div>
+            <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
+          </div>
+
+          <div class="menu-card premium-card" @click="router.push('/tabs/tools/asmaul-husna')">
+            <div class="icon-wrapper gradient-asmaul-husna">
+              <ion-icon :icon="star"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ $t('tools.asmaul_husna') }}</h3>
+              <p>{{ $t('tools.asmaul_husna_description') }}</p>
+            </div>
+            <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
+          </div>
+
+          <div class="menu-card premium-card" @click="router.push('/tabs/tools/imsyak')">
+            <div class="icon-wrapper gradient-imsyak">
+              <ion-icon :icon="time"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>Jadwal Imsyak</h3>
+              <p>Lihat jadwal imsak Ramadhan berdasarkan lokasi</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -43,8 +65,8 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon } from '@ionic/vue';
-import { calculator, moon, chevronForward } from 'ionicons/icons';
+import { IonPage, IonContent, IonIcon } from '@ionic/vue';
+import { calculator, moon, star, chevronForward, time } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -122,6 +144,14 @@ const router = useRouter();
 
 .gradient-ramadan {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.gradient-asmaul-husna {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.gradient-imsyak {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
 }
 
 .card-content {

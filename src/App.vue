@@ -16,10 +16,42 @@ const { t } = useI18n();
 const lastBackPress = ref(0);
 
 onMounted(async () => {
-  const { value } = await Preferences.get({ key: 'darkMode' });
-  // Default to true (dark) if not set
-  const isDark = value === null ? true : value === 'true';
-  document.body.classList.toggle('dark', isDark);
+  // Apply dark mode immediately
+  const applyDarkMode = async () => {
+    try {
+      const { value } = await Preferences.get({ key: 'darkMode' });
+      // Default to true (dark) if not set
+      const isDark = value === null ? true : value === 'true';
+      
+      // Force apply dark mode class
+      if (isDark) {
+        document.body.classList.add('dark');
+      } else {
+        document.body.classList.remove('dark');
+      }
+      
+      console.log('Dark mode applied:', isDark);
+    } catch (error) {
+      console.error('Failed to apply dark mode:', error);
+      // Default to dark mode on error
+      document.body.classList.add('dark');
+    }
+  };
+
+  // Apply dark mode on mount
+  await applyDarkMode();
+
+  // Check and request to disable battery optimization
+  try {
+    const { BatteryOptimizationService } = await import('@/shared/services/battery-optimization');
+    const isOptimized = await BatteryOptimizationService.checkBatteryOptimization();
+    if (isOptimized) {
+      await BatteryOptimizationService.requestBatteryOptimization();
+    }
+    console.log('Battery optimization check complete');
+  } catch (error) {
+    console.error('Failed to check battery optimization:', error);
+  }
 
   // Initialize background notifications
   try {

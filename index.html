@@ -30,6 +30,21 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      // Apply dark mode immediately to prevent flash
+      (function() {
+        try {
+          const darkMode = localStorage.getItem('darkMode');
+          const isDark = darkMode === null ? true : darkMode === 'true';
+          if (isDark) {
+            document.body.classList.add('dark');
+          }
+        } catch (e) {
+          // Default to dark on error
+          document.body.classList.add('dark');
+        }
+      })();
+    </script>
   </body>
 
 </html>

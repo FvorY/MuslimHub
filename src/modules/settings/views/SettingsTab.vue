@@ -39,6 +39,17 @@
               <ion-toggle :checked="isReminder" @ionChange="toggleReminder"></ion-toggle>
             </div>
 
+            <div class="setting-item" v-if="isReminder" @click="showNotificationHelp">
+              <div class="icon-wrapper gradient-notification">
+                <ion-icon :icon="informationCircle"></ion-icon>
+              </div>
+              <div class="setting-info">
+                <h3>Bantuan Notifikasi</h3>
+                <p>Solusikan notifikasi yang tertunda</p>
+              </div>
+              <ion-icon :icon="chevronForward" color="medium"></ion-icon>
+            </div>
+
             <div class="setting-item">
               <div class="icon-wrapper gradient-language">
                 <ion-icon :icon="language"></ion-icon>
@@ -81,7 +92,7 @@
 
 <script setup lang="ts">
 import { IonPage, IonContent, IonIcon, IonToggle, IonSelect, IonSelectOption } from '@ionic/vue';
-import { moon, language, notifications } from 'ionicons/icons';
+import { moon, language, notifications, informationCircle, chevronForward } from 'ionicons/icons';
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Preferences } from '@capacitor/preferences';
@@ -99,6 +110,12 @@ const toggleDark = async (event: any) => {
     key: 'darkMode',
     value: isDark.value ? 'true' : 'false'
   });
+  // Also update localStorage for immediate sync
+  try {
+    localStorage.setItem('darkMode', isDark.value ? 'true' : 'false');
+  } catch (e) {
+    console.warn('Failed to update localStorage:', e);
+  }
 };
 
 const isReminder = ref(false);
@@ -147,6 +164,14 @@ const refreshNotifications = async () => {
     } catch (e) {
       console.error('Failed to refresh notifications', e);
     }
+  }
+};
+
+const showNotificationHelp = async () => {
+  try {
+    await NotificationService.showNotificationTroubleshooting();
+  } catch (error) {
+    console.error('Failed to show notification help:', error);
   }
 };
 

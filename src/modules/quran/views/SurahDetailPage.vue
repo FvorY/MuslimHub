@@ -9,12 +9,17 @@
            {{ surah.namaLatin }}
         </ion-title>
         <ion-title v-else>Memuat...</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="toggleFullSurahPlay" fill="clear">
+            <ion-icon :icon="isFullSurahPlaying ? pauseCircle : playCircle" slot="icon-only" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
     <!-- <ion-header class="ion-no-border translucent-header">
       <ion-toolbar class="transparent-toolbar">
-        <ion-buttons slot="start">
+        <ion-buttons :slot="'start'">
           <ion-back-button default-href="/tabs/quran" text="" class="back-btn"></ion-back-button>
         </ion-buttons>
         <ion-title class="text-gradient">{{ surah.namaLatin }}</ion-title>
@@ -42,7 +47,7 @@
         </div>
 
         <div class="ayah-list">
-          <div v-for="ayat in surah.ayat" :key="ayat.nomorAyat" class="ayah-block">
+          <div v-for="(ayat, index) in surah.ayat" :key="ayat.nomorAyat" :id="`ayah-${index}`" class="ayah-block">
             <div class="ayah-header">
                <div class="ayah-number-tag">{{ surah.nomor }}:{{ ayat.nomorAyat }}</div>
                <div class="ayah-actions-dots">
@@ -68,6 +73,26 @@
            <p class="finish-text">Akhir dari Surah {{ surah.namaLatin }}</p>
         </div>
 
+        <!-- Full Surah Audio Controls -->
+        <div v-if="isFullSurahPlaying || currentAyahIndex !== null" class="audio-controls-bar">
+          <div class="audio-controls">
+            <ion-button fill="clear" size="small" @click="quranAudioPlayer.previousAyah()">
+              <ion-icon :icon="playSkipBack" slot="icon-only" />
+            </ion-button>
+            <ion-button fill="clear" size="small" @click="toggleFullSurahPlay">
+              <ion-icon :icon="isFullSurahPlaying ? pauseCircle : playCircle" slot="icon-only" />
+            </ion-button>
+            <ion-button fill="clear" size="small" @click="quranAudioPlayer.nextAyah()">
+              <ion-icon :icon="playSkipForward" slot="icon-only" />
+            </ion-button>
+          </div>
+          <div class="ayah-progress">
+            <span v-if="currentAyahIndex !== null && surah">
+              Ayat {{ currentAyahIndex + 1 }} dari {{ surah.ayat.length }}
+            </span>
+          </div>
+        </div>
+
       </div>
 
       <div v-else class="error-state ion-padding ion-text-center">
@@ -80,11 +105,14 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton, IonSpinner, IonIcon, IonButton } from '@ionic/vue';
-import { ellipsisVertical, play, pause } from 'ionicons/icons';
+  import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton, IonSpinner, IonIcon, IonButton } from '@ionic/vue';
+import { play, pause, playCircle, pauseCircle, playSkipBack, playSkipForward } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { QuranService, SurahDetail, Ayah } from '@/modules/quran/services/quran-api';
+import { quranAudioPlayer } from '@/modules/quran/services/quran-audio-player';
+import { backgroundAudioService } from '@/shared/services/background-audio';
+import { capacitorBackgroundAudioService } from '@/shared/services/capacitor-background-audio';
 
 const route = useRoute();
 const surah = ref<SurahDetail | null>(null);
@@ -92,6 +120,10 @@ const loading = ref(true);
 
 const currentAudio = ref<HTMLAudioElement | null>(null);
 const playingAyahNumber = ref<number | null>(null);
+
+// Full surah audio state
+const isFullSurahPlaying = ref(false);
+const currentAyahIndex = ref<number | null>(null);
 
 const toggleAudio = (ayah: Ayah) => {
     // If clicking the current playing ayah
@@ -137,6 +169,113 @@ const toggleAudio = (ayah: Ayah) => {
     audio.play();
 };
 
+// Full surah audio controls
+const toggleFullSurahPlay = () => {
+    if (!surah.value || !surah.value.ayat.length) return;
+    
+    if (isFullSurahPlaying.value) {
+        quranAudioPlayer.pause();
+    } else {
+        // Start playing from beginning or resume from current position
+        const startIndex = currentAyahIndex.value !== null ? currentAyahIndex.value : 0;
+        quranAudioPlayer.playSurah(surah.value.ayat, surah.value.nomor, startIndex);
+        
+        // Request audio focus and enable background playback
+        enableBackgroundAudio();
+    }
+};
+
+// Setup audio player callbacks
+const setupAudioPlayer = () => {
+    quranAudioPlayer.setCallbacks({
+        onPlayStateChange: (isPlaying: boolean) => {
+            isFullSurahPlaying.value = isPlaying;
+        },
+        onAyahChange: (ayahIndex: number) => {
+            currentAyahIndex.value = ayahIndex;
+            // Update individual ayah playing state
+            if (surah.value && surah.value.ayat[ayahIndex]) {
+                playingAyahNumber.value = surah.value.ayat[ayahIndex].nomorAyat;
+            }
+        },
+        onComplete: () => {
+            isFullSurahPlaying.value = false;
+            currentAyahIndex.value = null;
+            playingAyahNumber.value = null;
+            // Disable background audio when playback completes
+            backgroundAudioService.disableBackgroundAudio();
+            capacitorBackgroundAudioService.disableBackgroundMode();
+        },
+        onError: (error: string) => {
+            console.error('Full surah audio error:', error);
+            isFullSurahPlaying.value = false;
+        },
+        onScrollToAyah: (ayahIndex: number) => {
+            scrollToAyah(ayahIndex);
+        }
+    });
+};
+
+// Auto-scroll to ayah
+const scrollToAyah = (ayahIndex: number) => {
+    const ayahElement = document.getElementById(`ayah-${ayahIndex}`);
+    if (ayahElement) {
+        // Scroll with smooth animation
+        ayahElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center', // Center the ayah in the viewport
+            inline: 'nearest'
+        });
+        
+        // Add highlight effect temporarily
+        ayahElement.classList.add('ayah-highlight');
+        setTimeout(() => {
+            ayahElement.classList.remove('ayah-highlight');
+        }, 2000);
+    }
+};
+
+// Enable background audio playback
+const enableBackgroundAudio = async () => {
+    try {
+        // Enable Capacitor background audio service
+        await capacitorBackgroundAudioService.enableBackgroundMode();
+        
+        // Enable web background audio service as fallback
+        backgroundAudioService.enableBackgroundAudio();
+        
+        // Set up media session with current surah info
+        if (surah.value) {
+            backgroundAudioService.setupMediaSession(
+                surah.value.namaLatin,
+                'Misyari Rasyid',
+                [
+                    { src: '/assets/icon/icon-192.png', sizes: '192x192', type: 'image/png' },
+                    { src: '/assets/icon/icon-512.png', sizes: '512x512', type: 'image/png' }
+                ]
+            );
+        }
+        
+        // Set up media session handlers
+        if ('mediaSession' in navigator) {
+            (navigator as any).mediaSession.setActionHandler('play', () => {
+                quranAudioPlayer.resume();
+            });
+            (navigator as any).mediaSession.setActionHandler('pause', () => {
+                quranAudioPlayer.pause();
+            });
+            (navigator as any).mediaSession.setActionHandler('previoustrack', () => {
+                quranAudioPlayer.previousAyah();
+            });
+            (navigator as any).mediaSession.setActionHandler('nexttrack', () => {
+                quranAudioPlayer.nextAyah();
+            });
+        }
+    } catch (error) {
+        console.error('Failed to enable background audio:', error);
+    }
+};
+
 const loadDetail = async () => {
     const nomor = Number(route.params.nomor);
     if (!nomor) return;
@@ -152,8 +291,43 @@ const loadDetail = async () => {
     }
 };
 
+// Handle app visibility changes
+const handleVisibilityChange = () => {
+    if (document.hidden) {
+        // App is going to background
+        console.log('App going to background, audio should continue');
+    } else {
+        // App is coming to foreground
+        console.log('App coming to foreground');
+        // Ensure audio continues playing if it was playing
+        if (isFullSurahPlaying.value && quranAudioPlayer.getState().isPlaying) {
+            // Audio should already be playing, but we can ensure UI is in sync
+            isFullSurahPlaying.value = true;
+        }
+    }
+};
+
 onMounted(() => {
     loadDetail();
+    setupAudioPlayer();
+    
+    // Listen for visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Handle page lifecycle events for better background support
+    if ('wasDiscarded' in document) {
+        // Handle page restoration after being discarded
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted || (event as any).wasDiscarded) {
+                console.log('Page restored from cache/discarded state');
+                // Re-sync audio state if needed
+                if (isFullSurahPlaying.value) {
+                    const state = quranAudioPlayer.getState();
+                    currentAyahIndex.value = state.currentAyahIndex;
+                }
+            }
+        });
+    }
 });
 
 onUnmounted(() => {
@@ -161,6 +335,14 @@ onUnmounted(() => {
         currentAudio.value.pause();
         currentAudio.value = null;
     }
+    quranAudioPlayer.destroy();
+    
+    // Disable background audio
+    backgroundAudioService.disableBackgroundAudio();
+    capacitorBackgroundAudioService.disableBackgroundMode();
+    
+    // Clean up event listeners
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 </script>
 
@@ -191,14 +373,14 @@ onUnmounted(() => {
 
 .surah-header-card {
   height: 140px;
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--ion-color-primary) 0%, var(--ion-color-secondary) 100%);
   border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 10px 25px rgba(var(--ion-color-primary-rgb), 0.2);
 }
 
 .surah-info-glass {
@@ -217,14 +399,15 @@ onUnmounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: white;
-  opacity: 0.9;
+  color: var(--ion-text-color);
 }
 
 .bismillah-img {
     height: 32px;
-    filter: brightness(0) invert(1);
-    opacity: 0.9;
+}
+
+body.dark .bismillah-img {
+    filter: invert(1);
 }
 
 .ayah-list {
@@ -303,5 +486,65 @@ onUnmounted(() => {
 
 .error-state {
   padding-top: 60px;
+}
+
+.audio-controls-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid var(--ion-border-color);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ayah-progress {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  font-weight: 500;
+}
+
+/* Add padding to content when audio controls are visible */
+.ion-content::part(scroll) {
+  padding-bottom: 80px;
+}
+
+/* Auto-scroll highlight animation */
+.ayah-highlight {
+  animation: highlightAyah 2s ease-in-out;
+}
+
+@keyframes highlightAyah {
+  0% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+  25% {
+    background-color: rgba(var(--ion-color-primary-rgb), 0.1);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(var(--ion-color-primary-rgb), 0.2);
+  }
+  75% {
+    background-color: rgba(var(--ion-color-primary-rgb), 0.1);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(var(--ion-color-primary-rgb), 0.2);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+    box-shadow: none;
+  }
 }
 </style>

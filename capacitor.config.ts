@@ -5,6 +5,14 @@ const config: CapacitorConfig = {
   appName: 'MuslimHub',
   webDir: 'dist',
   plugins: {
+    BackgroundRunner: {
+      label: 'com.muslimhub.app.background.task',
+      src: 'background.js',
+      event: 'fetch',
+      repeat: true,
+      interval: 15,
+      autoStart: true,
+    },
     SplashScreen: {
       launchShowDuration: 0,
       launchAutoHide: true,
@@ -23,7 +31,6 @@ const config: CapacitorConfig = {
       smallIcon: "ic_stat_icon_config_sample",
       iconColor: "#488AFF",
       sound: "notification.wav",
-      attachments: [],
       schedule: {
         allowWhileIdle: true,
         exact: true

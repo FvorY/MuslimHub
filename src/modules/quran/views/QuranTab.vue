@@ -16,7 +16,7 @@
       </ion-toolbar>
     </ion-header>
     <ion-content>
-      <ion-refresher slot="fixed" @ionRefresh="handleRefresh">
+      <ion-refresher @ionRefresh="handleRefresh">
         <ion-refresher-content></ion-refresher-content>
       </ion-refresher>
 
@@ -58,10 +58,10 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar, Ion
 import { book } from 'ionicons/icons';
 import { ref, computed, onMounted } from 'vue';
 import { QuranService, Surah } from '@/modules/quran/services/quran-api';
-import { useI18n } from 'vue-i18n';
+
 
 const router = useIonRouter();
-const { t } = useI18n(); 
+ 
 
 const surahs = ref<Surah[]>([]);
 const searchQuery = ref('');

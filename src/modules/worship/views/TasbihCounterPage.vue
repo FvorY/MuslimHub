@@ -2,11 +2,11 @@
   <ion-page>
     <ion-header class="ion-no-border translucent-header">
       <ion-toolbar class="transparent-toolbar">
-        <ion-buttons slot="start">
+        <ion-buttons>
           <ion-back-button default-href="/tabs/worship/dzikir" text="" class="back-btn"></ion-back-button>
         </ion-buttons>
         <ion-title>{{ title }}</ion-title>
-        <ion-buttons slot="end">
+        <ion-buttons>
           <ion-button @click.stop="resetCount" class="icon-btn">
             <ion-icon :icon="refresh" />
           </ion-button>
@@ -115,7 +115,7 @@ const increment = async () => {
         await Haptics.impact({ style: ImpactStyle.Medium });
     }
   } catch (e) {
-    // Ignore haptic errors
+    console.error('Haptic feedback error:', e);
   }
 };
 
@@ -123,7 +123,9 @@ const resetCount = async () => {
     count.value = 0;
     try {
       await Haptics.notification({ type: 'warning' as any });
-    } catch (e) {}
+    } catch (e) {
+      console.error('Haptic feedback error on reset:', e);
+    }
 };
 </script>
 

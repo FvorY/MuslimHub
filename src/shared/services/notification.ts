@@ -2,6 +2,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { NotificationChannelService } from './notification-channel';
+import { BatteryOptimizationService } from './battery-optimization';
 
 export interface PrayerTimes {
     subuh: string;
@@ -9,6 +10,7 @@ export interface PrayerTimes {
     ashar: string;
     maghrib: string;
     isya: string;
+    imsyak: string;
 }
 
 export const NotificationService = {
@@ -26,6 +28,16 @@ export const NotificationService = {
             // Create notification channels for Android
             if (Capacitor.getPlatform() === 'android') {
                 await NotificationChannelService.createPrayerNotificationChannel();
+                
+                // Request battery optimization for better notification timing
+                const { value: batteryOptShown } = await Preferences.get({ key: 'batteryOptimizationShown' });
+                if (batteryOptShown !== 'true') {
+                    setTimeout(async () => {
+                        await BatteryOptimizationService.requestBatteryOptimization();
+                        await Preferences.set({ key: 'batteryOptimizationShown', value: 'true' });
+                    }, 3000); // Show after 3 seconds to not interrupt user experience
+                }
+                
                 const { value } = await Preferences.get({ key: 'exactAlarmPermission' });
                 if (value !== 'granted') {
                     console.log('Requesting exact alarm permission for background notifications');
@@ -96,6 +108,7 @@ export const NotificationService = {
                 { id: 3, name: 'Ashar', time: prayerTimes.ashar, sound: 'adzan.mp3' },
                 { id: 4, name: 'Maghrib', time: prayerTimes.maghrib, sound: 'adzan.mp3' },
                 { id: 5, name: 'Isya', time: prayerTimes.isya, sound: 'adzan.mp3' },
+                { id: 6, name: 'Imsyak', time: prayerTimes.imsyak, sound: 'notification.wav' },
             ];
 
             const notifications = prayers.map(prayer => {
@@ -112,8 +125,8 @@ export const NotificationService = {
 
                 return {
                     id: prayer.id,
-                    title: `Waktunya Sholat ${prayer.name}`,
-                    body: `Mari tunaikan ibadah sholat ${prayer.name} tepat waktu.`,
+                    title: prayer.name === 'Imsyak' ? 'Waktu Imsyak' : `Waktunya Sholat ${prayer.name}`,
+                    body: prayer.name === 'Imsyak' ? 'Waktu imsyak telah tiba.' : `Mari tunaikan ibadah sholat ${prayer.name} tepat waktu.`,
                     schedule: {
                         at: triggerTime,
                         repeats: true,
@@ -128,9 +141,16 @@ export const NotificationService = {
                         autoCancel: false, // Keep notification until user dismisses
                         ongoing: true // Show as ongoing notification
                     },
-                    channelId: prayer.name === 'Subuh' ? 'subuh_notifications' : 'prayer_notifications',
+                    channelId: prayer.name === 'Subuh' ? 'subuh_notifications' : prayer.name === 'Imsyak' ? 'imsyak_notifications' : 'prayer_notifications',
                     ongoing: true, // Make it ongoing notification
-                    autoCancel: false // Don't auto-cancel
+                    autoCancel: false, // Don't auto-cancel
+                    // Add high priority for better timing
+                    priority: 2, // HIGH priority
+                    visibility: 1, // PUBLIC visibility
+                    group: 'prayer_notifications',
+                    groupSummary: true,
+                    smallIcon: 'ic_stat_icon_config_sample',
+                    iconColor: '#10b981'
                 };
             });
 
@@ -161,5 +181,13 @@ export const NotificationService = {
             });
         }
         console.log('All prayer notifications canceled');
+    },
+
+    async showNotificationTroubleshooting(): Promise<void> {
+        try {
+            await BatteryOptimizationService.showBatteryOptimizationInfo();
+        } catch (error) {
+            console.error('Failed to show notification troubleshooting:', error);
+        }
     }
 };

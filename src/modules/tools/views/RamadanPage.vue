@@ -5,21 +5,21 @@
         <ion-buttons slot="start">
           <ion-back-button default-href="/tabs/tools"></ion-back-button>
         </ion-buttons>
-        <ion-title>Ramadan Companion</ion-title>
+        <ion-title>{{ t('tools.ramadan_companion') }}</ion-title>
       </ion-toolbar>
     </ion-header>
     <ion-content :fullscreen="true">
        <div class="ramadan-hero ion-padding ion-text-center">
-         <h1>🌙 Ramadan Kareem</h1>
+         <h1>🌙 {{ t('tools.ramadan_kareem') }}</h1>
          <div class="countdown-box">
            <h2>{{ daysLeft }}</h2>
-           <p>Days Left (Approx)</p>
+           <p>{{ t('tools.days_left') }}</p>
          </div>
          <div class="progress-ring">
-           <div class="progress-circle" :style="{ background: `conic-gradient(#10b981 0deg, #10b981 ${progressAngle}deg, #e5e7eb ${progressAngle}deg, #e5e7eb 360deg)` }">
+           <div class="progress-circle" :style="{ background: `conic-gradient(var(--ion-color-primary) 0deg, var(--ion-color-primary) ${progressAngle}deg, var(--ion-color-light) ${progressAngle}deg, var(--ion-color-light) 360deg)` }">
              <div class="progress-inner">
                <span class="progress-text">{{ completedTasks }}/{{ totalTasks }}</span>
-               <span class="progress-label">Completed</span>
+               <span class="progress-label">{{ t('tools.completed') }}</span>
              </div>
            </div>
          </div>
@@ -29,18 +29,18 @@
          <div class="stats-grid">
            <div class="stat-card">
              <div class="stat-number">{{ streakDays }}</div>
-             <div class="stat-label">Day Streak</div>
+             <div class="stat-label">{{ t('tools.day_streak') }}</div>
            </div>
            <div class="stat-card">
              <div class="stat-number">{{ totalCompleted }}</div>
-             <div class="stat-label">Total Tasks</div>
+             <div class="stat-label">{{ t('tools.total_tasks') }}</div>
            </div>
          </div>
        </div>
 
        <div class="checklist-section ion-padding">
          <div class="section-header">
-           <h3>Daily Checklist</h3>
+           <h3>{{ t('tools.daily_checklist') }}</h3>
            <ion-button fill="clear" size="small" @click="resetDaily">
             <ion-icon :icon="refresh"></ion-icon>
           </ion-button>
@@ -70,7 +70,7 @@
        </div>
 
        <div class="history-section ion-padding" v-if="recentHistory.length > 0">
-         <h3>Recent Activity</h3>
+         <h3>{{ t('tools.recent_activity') }}</h3>
          <div class="history-list">
            <div v-for="(day, index) in recentHistory" :key="index" class="history-item">
              <div class="history-date">{{ formatDate(day.date) }}</div>
@@ -92,6 +92,9 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBa
 import { computed, ref } from 'vue';
 import { StorageService } from '@/shared/services/storage';
 import { checkmark, refresh } from 'ionicons/icons';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const STORAGE_KEY = 'ramadan_checklist';
 const STORAGE_KEY_HISTORY = 'ramadan_history';
@@ -111,10 +114,10 @@ interface HistoryDay {
 }
 
 const checklist = ref<ChecklistItem[]>([
-  { id: 'fasting', label: 'Puasa', description: 'Menjalankan puasa Ramadan', checked: false, icon: '🌙' },
-  { id: 'prayers', label: 'Sholat 5 Waktu', description: 'Melaksanakan sholat fardhu', checked: false, icon: '🕌' },
-  { id: 'tarawih', label: 'Sholat Tarawih', description: 'Sholat sunnah di malam hari', checked: false, icon: '🌟' },
-  { id: 'quran', label: 'Membaca Quran', description: 'Tilawah Al-Quran', checked: false, icon: '📖' },
+  { id: 'fasting', label: t('tools.fasting'), description: t('tools.fasting_description'), checked: false, icon: '🌙' },
+  { id: 'prayers', label: t('tools.prayers'), description: t('tools.prayers_description'), checked: false, icon: '🕌' },
+  { id: 'tarawih', label: t('tools.tarawih'), description: t('tools.tarawih_description'), checked: false, icon: '🌟' },
+  { id: 'quran', label: t('tools.quran'), description: t('tools.quran_description'), checked: false, icon: '📖' },
 ]);
 
 const streakDays = ref(0);
@@ -258,12 +261,12 @@ onIonViewWillEnter(() => {
 
 <style scoped>
 .ramadan-hero {
-  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--ion-color-primary) 0%, var(--ion-color-secondary) 100%);
+  color: var(--ion-color-primary-contrast);
   padding: 40px 20px;
   border-bottom-left-radius: 30px;
   border-bottom-right-radius: 30px;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 4px 15px rgba(var(--ion-color-primary-rgb), 0.2);
 }
 
 .ramadan-hero h1 {
@@ -305,7 +308,7 @@ onIonViewWillEnter(() => {
 .progress-inner {
   width: 90px;
   height: 90px;
-  background: white;
+  background: var(--ion-card-background);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
@@ -317,12 +320,12 @@ onIonViewWillEnter(() => {
 .progress-text {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #10b981;
+  color: var(--ion-color-primary);
 }
 
 .progress-label {
   font-size: 0.7rem;
-  color: #6b7280;
+  color: var(--ion-color-medium);
   margin-top: 2px;
 }
 
@@ -337,7 +340,7 @@ onIonViewWillEnter(() => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--ion-card-background);
   border-radius: 16px;
   padding: 20px;
   text-align: center;
@@ -347,13 +350,13 @@ onIonViewWillEnter(() => {
 .stat-number {
   font-size: 2rem;
   font-weight: 800;
-  color: #10b981;
+  color: var(--ion-color-primary);
   margin-bottom: 5px;
 }
 
 .stat-label {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--ion-color-medium);
 }
 
 .section-header {
@@ -367,11 +370,11 @@ onIonViewWillEnter(() => {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--ion-color-dark);
 }
 
 .checklist-container {
-  background: white;
+  background: var(--ion-card-background);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
@@ -381,7 +384,7 @@ onIonViewWillEnter(() => {
   display: flex;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--ion-border-color);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -391,7 +394,7 @@ onIonViewWillEnter(() => {
 }
 
 .checklist-item:hover {
-  background: #f9fafb;
+  background: var(--ion-color-step-100);
 }
 
 .checklist-item.completed {
@@ -400,7 +403,7 @@ onIonViewWillEnter(() => {
 
 .checklist-item.completed .item-label {
   text-decoration: line-through;
-  color: #6b7280;
+  color: var(--ion-color-medium);
 }
 
 .checkbox-wrapper {
@@ -410,7 +413,7 @@ onIonViewWillEnter(() => {
 .custom-checkbox {
   width: 24px;
   height: 24px;
-  border: 2px solid #d1d5db;
+  border: 2px solid var(--ion-color-medium);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -419,8 +422,8 @@ onIonViewWillEnter(() => {
 }
 
 .custom-checkbox.checked {
-  background: #10b981;
-  border-color: #10b981;
+  background: var(--ion-color-primary);
+  border-color: var(--ion-color-primary);
 }
 
 .check-icon {
@@ -434,13 +437,13 @@ onIonViewWillEnter(() => {
 
 .item-label {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--ion-color-dark);
   margin-bottom: 4px;
 }
 
 .item-description {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--ion-color-medium);
 }
 
 .item-icon {
@@ -456,11 +459,11 @@ onIonViewWillEnter(() => {
   margin-bottom: 16px;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--ion-text-color);
 }
 
 .history-list {
-  background: white;
+  background: var(--ion-card-background);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
@@ -480,7 +483,7 @@ onIonViewWillEnter(() => {
 
 .history-date {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--ion-text-color);
   min-width: 60px;
 }
 
@@ -495,56 +498,23 @@ onIonViewWillEnter(() => {
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: #e5e7eb;
+  background: var(--ion-color-light);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: #10b981;
+  background: var(--ion-color-primary);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 
 .progress-text {
   font-size: 0.85rem;
-  color: #6b7280;
-  min-width: 40px;
+  color: var(--ion-text-color);
   text-align: right;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .stats-grid,
-  .checklist-container,
-  .history-list {
-    background: #1f2937;
-  }
-  
-  .stat-card {
-    background: #374151;
-  }
-  
-  .section-header h3,
-  .history-section h3,
-  .item-label,
-  .history-date {
-    color: #f9fafb;
-  }
-  
-  .stat-label,
-  .item-description,
-  .progress-text {
-    color: #d1d5db;
-  }
-  
-  .checklist-item:hover {
-    background: #374151;
-  }
-  
-  .checklist-item.completed .item-label {
-    color: #9ca3af;
-  }
-}
+
 </style>

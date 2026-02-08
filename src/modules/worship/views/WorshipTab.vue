@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon } from '@ionic/vue';
+import { IonPage, IonContent, IonIcon } from '@ionic/vue';
 import { time, fingerPrint, compass, chevronForward } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 
