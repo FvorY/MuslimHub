@@ -82,14 +82,10 @@ export const NotificationService = {
         // Get current notifications
         const pending = await LocalNotifications.getPending();
         
-        // Check if we need to reschedule for tomorrow
-        const needsUpdate = pending.notifications.some(notification => {
-            if (!notification.schedule?.at) return true;
-            const notificationTime = new Date(notification.schedule.at);
-            return notificationTime < now;
-        });
+        // On-demand re-scheduling
+        const needsUpdate = pending.notifications.length === 0;
 
-        if (needsUpdate || pending.notifications.length === 0) {
+        if (needsUpdate) {
             console.log('Updating prayer notifications for:', today);
             await this.schedulePrayerNotifications(prayerTimes);
         } else {
@@ -111,7 +107,9 @@ export const NotificationService = {
                 { id: 6, name: 'Imsyak', time: prayerTimes.imsyak, sound: 'notification.wav' },
             ];
 
-            const notifications = prayers.map(prayer => {
+            const notifications = prayers
+                .filter(prayer => prayer.time) // Filter out prayers with no time
+                .map(prayer => {
                 const [hours, minutes] = prayer.time.split(':').map(Number);
                 
                 // Create trigger time with date to ensure accurate timing
@@ -129,7 +127,6 @@ export const NotificationService = {
                     body: prayer.name === 'Imsyak' ? 'Waktu imsyak telah tiba.' : `Mari tunaikan ibadah sholat ${prayer.name} tepat waktu.`,
                     schedule: {
                         at: triggerTime,
-                        repeats: true,
                         allowWhileIdle: true,
                         exact: true, // For exact timing on Android
                     },

@@ -1,5 +1,5 @@
 
-addEventListener('fetch', async (resolve, reject, args) => {
+addEventListener('fetch', async (resolve, reject) => {
   try {
     const { PrayerTimeService } = await import('./modules/worship/services/prayer-times');
     const { NotificationService } = await import('./shared/services/notification');

@@ -47,6 +47,17 @@
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
+
+          <div class="menu-card premium-card" @click="router.push('/tabs/worship/doa')">
+            <div class="icon-wrapper gradient-4">
+              <ion-icon :icon="book"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>Doa</h3>
+              <p>Kumpulan doa-doa harian</p>
+            </div>
+            <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
+          </div>
         </section>
       </div>
     </ion-content>
@@ -55,7 +66,7 @@
 
 <script setup lang="ts">
 import { IonPage, IonContent, IonIcon } from '@ionic/vue';
-import { time, fingerPrint, compass, chevronForward } from 'ionicons/icons';
+import { time, fingerPrint, compass, chevronForward, book } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -128,6 +139,10 @@ const router = useRouter();
 
 .gradient-3 {
   background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.gradient-4 {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 
 .card-content {
