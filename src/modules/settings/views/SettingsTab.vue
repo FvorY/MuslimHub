@@ -152,21 +152,6 @@ const toggleReminder = async (event: any) => {
   });
 };
 
-// Background refresh for notifications
-const refreshNotifications = async () => {
-  if (isReminder.value) {
-    try {
-      const pos = await GeolocationService.getCurrentPosition();
-      const times = await PrayerTimeService.getPrayerTimes(pos.coords.latitude, pos.coords.longitude);
-      if (times) {
-        await NotificationService.updatePrayerNotifications(times);
-      }
-    } catch (e) {
-      console.error('Failed to refresh notifications', e);
-    }
-  }
-};
-
 const showNotificationHelp = async () => {
   try {
     await NotificationService.showNotificationTroubleshooting();
@@ -193,16 +178,8 @@ onMounted(async () => {
   const { value: reminderVal } = await Preferences.get({ key: 'prayerReminder' });
   isReminder.value = reminderVal === 'true';
 
-  // Refresh notifications every hour to ensure they stay accurate
-  const notificationInterval = setInterval(refreshNotifications, 60 * 60 * 1000);
-  
-  // Initial refresh if reminders are enabled
-  if (isReminder.value) {
-    refreshNotifications();
-  }
-
   // Cleanup interval on unmount
-  return () => clearInterval(notificationInterval);
+  return () => {};
 });
 </script>
 

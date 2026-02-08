@@ -53,6 +53,15 @@ onMounted(async () => {
     console.error('Failed to check battery optimization:', error);
   }
 
+  // Initialize background runner
+  try {
+    const { BackgroundRunnerService } = await import('@/shared/services/background-runner');
+    await BackgroundRunnerService.init();
+    console.log('Background runner initialized');
+  } catch (error) {
+    console.error('Failed to initialize background runner:', error);
+  }
+
   // Initialize background notifications
   try {
     const { NotificationService } = await import('@/shared/services/notification');

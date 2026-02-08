@@ -8,9 +8,9 @@ const config: CapacitorConfig = {
     BackgroundRunner: {
       label: 'com.muslimhub.app.background.task',
       src: 'background.js',
-      event: 'fetch',
+      event: 'fetch-prayer-times',
       repeat: true,
-      interval: 15,
+      interval: 3600,
       autoStart: true,
     },
     SplashScreen: {
