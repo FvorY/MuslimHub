@@ -19,6 +19,20 @@ const sanitizeDescription = (input: unknown): string => {
         .trim();
 };
 
+const sanitizeVerseText = (input: unknown): string => {
+    const text = String(input ?? '');
+    return text
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
 export interface Surah {
     nomor: number;
     nama: string;
@@ -66,8 +80,8 @@ const mapSurah = (raw: Record<string, any>): Surah => ({
 const mapAyah = (raw: Record<string, any>): Ayah => ({
     nomorAyat: Number(raw.nomor ?? raw.nomorAyat ?? raw.ayat ?? 0),
     teksArab: String(raw.ar ?? raw.teksArab ?? raw.arab ?? ''),
-    teksLatin: String(raw.tr ?? raw.teksLatin ?? raw.latin ?? ''),
-    teksIndonesia: String(raw.idn ?? raw.teksIndonesia ?? raw.terjemahan ?? ''),
+    teksLatin: sanitizeVerseText(raw.tr ?? raw.teksLatin ?? raw.latin ?? ''),
+    teksIndonesia: sanitizeVerseText(raw.idn ?? raw.teksIndonesia ?? raw.terjemahan ?? ''),
     audio: raw.audio ?? null,
 });
 
@@ -80,6 +94,18 @@ const mapSurahDetail = (raw: Record<string, any>): SurahDetail => {
         prevSurat: raw.prevSurat ?? null,
     };
 };
+
+const sanitizeSurahDetail = (detail: SurahDetail): SurahDetail => ({
+    ...detail,
+    deskripsi: sanitizeDescription(detail.deskripsi),
+    ayat: Array.isArray(detail.ayat)
+        ? detail.ayat.map((ayah) => ({
+            ...ayah,
+            teksLatin: sanitizeVerseText(ayah.teksLatin),
+            teksIndonesia: sanitizeVerseText(ayah.teksIndonesia),
+        }))
+        : [],
+});
 
 export const QuranService = {
     async getSurahList(forceRefresh = false): Promise<Surah[]> {
@@ -117,7 +143,7 @@ export const QuranService = {
 
         // Fallback to cache if API fails or is offline
         const cached = await StorageService.get<SurahDetail>(key);
-        return cached ? { ...cached, deskripsi: sanitizeDescription(cached.deskripsi) } : null;
+        return cached ? sanitizeSurahDetail(cached) : null;
     },
 
     async isSurahCached(nomor: number): Promise<boolean> {
