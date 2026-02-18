@@ -8,7 +8,7 @@
         <ion-title v-if="surah" class="text-gradient">
            {{ surah.namaLatin }}
         </ion-title>
-        <ion-title v-else>Memuat...</ion-title>
+        <ion-title v-else>{{ t('quran.loading_surah') }}</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="toggleFullSurahPlay" fill="clear">
             <ion-icon :icon="isFullSurahPlaying ? pauseCircle : playCircle" slot="icon-only" />
@@ -36,7 +36,7 @@
         <!-- Bismillah Header -->
         <div class="surah-header-card ion-margin">
            <div class="surah-info-glass glass-effect">
-              <div class="surah-type">{{ surah.tempatTurun }} • {{ surah.jumlahAyat }} Ayat</div>
+              <div class="surah-type">{{ surah.tempatTurun }} • {{ t('quran.ayah_count', { count: surah.jumlahAyat }) }}</div>
               <img 
                 v-if="surah.nomor !== 9"
                 src="https://upload.wikimedia.org/wikipedia/commons/2/27/Basmala.svg" 
@@ -54,6 +54,9 @@
                  <ion-button fill="clear" size="small" @click="toggleAudio(ayat)">
                    <ion-icon :icon="playingAyahNumber === ayat.nomorAyat ? pause : play" slot="icon-only" />
                  </ion-button>
+                 <ion-button fill="clear" size="small" @click="setLastReadMark(ayat)">
+                   <ion-icon :icon="lastReadAyahNumber === ayat.nomorAyat ? bookmark : bookmarkOutline" slot="icon-only" />
+                 </ion-button>
                </div>
             </div>
             
@@ -65,12 +68,15 @@
                <div class="translation-premium">
                   <p>{{ ayat.teksIndonesia }}</p>
                </div>
+               <div v-if="lastReadAyahNumber === ayat.nomorAyat" class="last-read-label">
+                 {{ t('quran.last_read') }}
+               </div>
             </div>
           </div>
         </div>
 
         <div class="navigation-footer ion-padding ion-text-center">
-           <p class="finish-text">Akhir dari Surah {{ surah.namaLatin }}</p>
+           <p class="finish-text">{{ t('quran.end_of_surah', { name: surah.namaLatin }) }}</p>
         </div>
 
         <!-- Full Surah Audio Controls -->
@@ -88,7 +94,7 @@
           </div>
           <div class="ayah-progress">
             <span v-if="currentAyahIndex !== null && surah">
-              Ayat {{ currentAyahIndex + 1 }} dari {{ surah.ayat.length }}
+              {{ t('quran.ayah_progress', { current: currentAyahIndex + 1, total: surah.ayat.length }) }}
             </span>
           </div>
         </div>
@@ -96,8 +102,8 @@
       </div>
 
       <div v-else class="error-state ion-padding ion-text-center">
-        <p>Gagal memuat Surah.</p>
-        <ion-button fill="clear" @click="loadDetail">Coba Lagi</ion-button>
+        <p>{{ t('quran.failed_load_surah') }}</p>
+        <ion-button fill="clear" @click="loadDetail">{{ t('common.retry') }}</ion-button>
       </div>
 
     </ion-content>
@@ -106,20 +112,24 @@
 
 <script setup lang="ts">
   import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton, IonSpinner, IonIcon, IonButton } from '@ionic/vue';
-import { play, pause, playCircle, pauseCircle, playSkipBack, playSkipForward } from 'ionicons/icons';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { play, pause, playCircle, pauseCircle, playSkipBack, playSkipForward, bookmark, bookmarkOutline } from 'ionicons/icons';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { QuranService, SurahDetail, Ayah } from '@/modules/quran/services/quran-api';
 import { quranAudioPlayer } from '@/modules/quran/services/quran-audio-player';
 import { backgroundAudioService } from '@/shared/services/background-audio';
 import { capacitorBackgroundAudioService } from '@/shared/services/capacitor-background-audio';
+import { QuranReadingProgressService } from '@/modules/quran/services/quran-reading-progress';
 
 const route = useRoute();
+const { t } = useI18n();
 const surah = ref<SurahDetail | null>(null);
 const loading = ref(true);
 
 const currentAudio = ref<HTMLAudioElement | null>(null);
 const playingAyahNumber = ref<number | null>(null);
+const lastReadAyahNumber = ref<number | null>(null);
 
 // Full surah audio state
 const isFullSurahPlaying = ref(false);
@@ -235,6 +245,33 @@ const scrollToAyah = (ayahIndex: number) => {
     }
 };
 
+const loadLastReadMark = async () => {
+    const lastRead = await QuranReadingProgressService.getLastRead();
+    if (!surah.value) return;
+    if (lastRead?.surahNumber === surah.value.nomor) {
+        lastReadAyahNumber.value = lastRead.ayahNumber;
+        return;
+    }
+    lastReadAyahNumber.value = null;
+};
+
+const setLastReadMark = async (ayah: Ayah) => {
+    if (!surah.value) return;
+    await QuranReadingProgressService.setLastRead({
+        surahNumber: surah.value.nomor,
+        surahName: surah.value.namaLatin,
+        ayahNumber: ayah.nomorAyat
+    });
+    lastReadAyahNumber.value = ayah.nomorAyat;
+};
+
+const scrollToAyahFromQuery = async () => {
+    const ayah = Number(route.query.ayah);
+    if (!ayah || ayah < 1) return;
+    await nextTick();
+    scrollToAyah(ayah - 1);
+};
+
 // Enable background audio playback
 const enableBackgroundAudio = async () => {
     try {
@@ -284,6 +321,8 @@ const loadDetail = async () => {
     try {
       const data = await QuranService.getSurahDetail(nomor);
       surah.value = data;
+      await loadLastReadMark();
+      await scrollToAyahFromQuery();
     } catch (e) {
       console.error(e);
     } finally {
@@ -469,6 +508,18 @@ body.dark .bismillah-img {
     font-weight: 450;
     border-top: 1px dashed var(--ion-border-color);
     padding-top: 16px;
+}
+
+.last-read-label {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  color: var(--ion-color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .loading-state {

@@ -19,7 +19,7 @@
           <div class="location-content">
             <div class="location-tag glass-effect" @click="refreshLocation">
               <ion-icon :icon="location" />
-              <span>{{ locationName || 'Mendeteksi Lokasi...' }}</span>
+              <span>{{ locationName || t('worship.prayer_location_detecting') }}</span>
               <ion-icon :icon="refresh" class="refresh-icon" />
             </div>
             <div class="date-info">
@@ -41,7 +41,7 @@
             </div>
             <div class="prayer-names">
               <span class="prayer-name">{{ $t(`prayers.${String(name).toLowerCase()}`) }}</span>
-              <span class="active-badge" v-if="isCurrent(String(name))">Sekarang</span>
+              <span class="active-badge" v-if="isCurrent(String(name))">{{ t('worship.prayer_now') }}</span>
             </div>
           </div>
           <div class="prayer-right">
@@ -54,7 +54,7 @@
       </div>
 
       <div class="footer-note ion-padding ion-text-center">
-        <p>Waktu shalat berdasarkan lokasi perangkat Anda.</p>
+        <p>{{ t('worship.prayer_based_on_device') }}</p>
       </div>
     </ion-content>
   </ion-page>
@@ -68,7 +68,7 @@ import { useI18n } from 'vue-i18n';
 import { PrayerTimeService, PrayerTimes } from '@/modules/worship/services/prayer-times';
 import { SmartLocationService } from '@/shared/services/smart-location';
 
-const { locale } = useI18n(); 
+const { locale, t } = useI18n();
 const times = ref<PrayerTimes | null>(null);
 const locationName = ref<string>('');
 const currentPrayerName = ref<string>('');
@@ -111,7 +111,7 @@ const loadData = async () => {
     const result = await PrayerTimeService.getPrayerTimes(location.latitude, location.longitude);
     if (result) {
       times.value = result;
-      locationName.value = result.city || location.city || 'Lokasi Saya';
+      locationName.value = result.city || location.city || t('worship.prayer_location_mine');
       updateCurrentPrayer(result);
     }
     
@@ -162,10 +162,10 @@ const refreshLocation = async () => {
     const location = await SmartLocationService.getLocation();
     
     // Update jadwal sholat dengan lokasi baru
-    const result = await PrayerTimeService.getPrayerTimes(location.latitude, location.longitude);
+    const result = await PrayerTimeService.getPrayerTimes(location.latitude, location.longitude, { force: true });
     if (result) {
       times.value = result;
-      locationName.value = result.city || location.city || 'Lokasi Saya';
+      locationName.value = result.city || location.city || t('worship.prayer_location_mine');
       updateCurrentPrayer(result);
     }
   } catch (e) {

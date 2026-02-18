@@ -8,12 +8,36 @@
 import { IonApp, IonRouterOutlet, useBackButton, useIonRouter, toastController } from '@ionic/vue';
 import { App } from '@capacitor/app';
 import { useI18n } from 'vue-i18n';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Preferences } from '@capacitor/preferences';
 
 const ionRouter = useIonRouter();
 const { t } = useI18n();
 const lastBackPress = ref(0);
+let appStateListener: { remove: () => Promise<void> } | null = null;
+
+const refreshPrayerNotifications = async (force = false) => {
+  try {
+    const { PrayerTimeService } = await import('@/modules/worship/services/prayer-times');
+    const { NotificationService } = await import('@/shared/services/notification');
+    const { GeolocationService } = await import('@/shared/services/geolocation');
+    
+    const { value: reminderEnabled } = await Preferences.get({ key: 'prayerReminder' });
+    
+    if (reminderEnabled === 'true') {
+      const pos = await GeolocationService.getCurrentPosition().catch(() => null);
+      if (pos) {
+        const times = await PrayerTimeService.getPrayerTimes(pos.coords.latitude, pos.coords.longitude, { force });
+        if (times) {
+          await NotificationService.updatePrayerNotifications(times, { force });
+          console.log(`Prayer notifications refreshed (force=${force})`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to refresh notifications:', error);
+  }
+};
 
 onMounted(async () => {
   // Apply dark mode immediately
@@ -72,26 +96,21 @@ onMounted(async () => {
   }
 
   // Refresh prayer notifications when app opens
-  try {
-    const { PrayerTimeService } = await import('@/modules/worship/services/prayer-times');
-    const { NotificationService } = await import('@/shared/services/notification');
-    const { GeolocationService } = await import('@/shared/services/geolocation');
-    const { Preferences } = await import('@capacitor/preferences');
-    
-    const { value: reminderEnabled } = await Preferences.get({ key: 'prayerReminder' });
-    
-    if (reminderEnabled === 'true') {
-      const pos = await GeolocationService.getCurrentPosition().catch(() => null);
-      if (pos) {
-        const times = await PrayerTimeService.getPrayerTimes(pos.coords.latitude, pos.coords.longitude);
-        if (times) {
-          await NotificationService.updatePrayerNotifications(times);
-          console.log('Prayer notifications refreshed on app open');
-        }
-      }
+  await refreshPrayerNotifications(false);
+
+  // Re-sync notifications whenever app returns to foreground.
+  // This helps when user changes device time/timezone manually.
+  appStateListener = await App.addListener('appStateChange', async ({ isActive }) => {
+    if (isActive) {
+      await refreshPrayerNotifications(true);
     }
-  } catch (error) {
-    console.error('Failed to refresh notifications on app open:', error);
+  });
+});
+
+onUnmounted(async () => {
+  if (appStateListener) {
+    await appStateListener.remove();
+    appStateListener = null;
   }
 });
 

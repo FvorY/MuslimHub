@@ -5,6 +5,28 @@ export type PrayerTime = {
   time: string; // HH:mm
 };
 
+function parseTime(time: string): { hour: number; minute: number } | null {
+  if (!time) return null;
+  const match = time.match(/(\d{1,2}):(\d{1,2})/);
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+
+  if (
+    Number.isNaN(hour) ||
+    Number.isNaN(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  return { hour, minute };
+}
+
 export async function schedulePrayerNotifications(
   prayerTimes: PrayerTime[],
   options?: {
@@ -15,7 +37,11 @@ export async function schedulePrayerNotifications(
   // 1️⃣ Permission
   const permStatus = await LocalNotifications.checkPermissions();
   if (permStatus.display !== 'granted') {
-    await LocalNotifications.requestPermissions();
+    const requestStatus = await LocalNotifications.requestPermissions();
+    if (requestStatus.display !== 'granted') {
+      console.warn('Notification permission not granted');
+      return;
+    }
   }
 
   // 2️⃣ Hapus notif lama
@@ -33,15 +59,18 @@ export async function schedulePrayerNotifications(
   // 3️⃣ Schedule sholat
   for (const prayer of prayerTimes) {
     if (!prayer.time) continue;
-    
-    const [hour, minute] = prayer.time.split(':').map(Number);
+    const parsedTime = parseTime(prayer.time);
+    if (!parsedTime) {
+      console.warn(`Invalid prayer time format for ${prayer.name}:`, prayer.time);
+      continue;
+    }
 
     const scheduleAt = new Date(
       today.getFullYear(),
       today.getMonth(),
       today.getDate(),
-      hour,
-      minute,
+      parsedTime.hour,
+      parsedTime.minute,
       0
     );
 
@@ -66,29 +95,33 @@ export async function schedulePrayerNotifications(
 
   // 4️⃣ Optional: Imsyak
   if (options?.enableImsyak && options.imsyakTime) {
-    const [h, m] = options.imsyakTime.split(':').map(Number);
+    const parsedImsyak = parseTime(options.imsyakTime);
+    if (!parsedImsyak) {
+      console.warn('Invalid imsyak time format:', options.imsyakTime);
+    } else {
 
-    const imsyakAt = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-      h,
-      m,
-      0
-    );
+      const imsyakAt = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        parsedImsyak.hour,
+        parsedImsyak.minute,
+        0
+      );
 
-    if (imsyakAt > now) {
-      notifications.push({
-        id: notifId++,
-        title: 'Imsyak',
-        body: 'Waktu imsyak telah tiba',
-        channelId: 'imsyak_notifications',
-        schedule: {
-          at: imsyakAt,
-          allowWhileIdle: true
-        },
-        sound: 'adzan.mp3' // Fallback
-      });
+      if (imsyakAt > now) {
+        notifications.push({
+          id: notifId++,
+          title: 'Imsyak',
+          body: 'Waktu imsyak telah tiba',
+          channelId: 'imsyak_notifications',
+          schedule: {
+            at: imsyakAt,
+            allowWhileIdle: true
+          },
+          sound: 'adzan.mp3' // Fallback
+        });
+      }
     }
   }
 
@@ -100,6 +133,4 @@ export async function schedulePrayerNotifications(
     console.log('No notifications to schedule for today (all times passed)');
   }
 
-  // 6️⃣ Simpan tanggal schedule
-  localStorage.setItem('last_prayer_schedule', today.toDateString());
 }

@@ -29,6 +29,7 @@ export const NotificationService = {
             // Create notification channels for Android
             if (Capacitor.getPlatform() === 'android') {
                 await NotificationChannelService.init();
+                await this.checkExactAlarmPermission();
                 
                 // Request battery optimization for better notification timing
                 const { value: batteryOptShown } = await Preferences.get({ key: 'batteryOptimizationShown' });
@@ -39,11 +40,6 @@ export const NotificationService = {
                     }, 3000); // Show after 3 seconds to not interrupt user experience
                 }
                 
-                const { value } = await Preferences.get({ key: 'exactAlarmPermission' });
-                if (value !== 'granted') {
-                    console.log('Requesting exact alarm permission for background notifications');
-                    // This will be handled by the plugin automatically
-                }
             }
             
             // Register background notification listeners
@@ -65,6 +61,32 @@ export const NotificationService = {
         });
     },
 
+    async checkExactAlarmPermission(): Promise<boolean> {
+        if (Capacitor.getPlatform() !== 'android') return true;
+
+        try {
+            const status = await LocalNotifications.checkExactNotificationSetting();
+            await Preferences.set({ key: 'exactAlarmPermission', value: status.exact_alarm });
+            return status.exact_alarm === 'granted';
+        } catch (error) {
+            console.error('Failed to check exact alarm setting:', error);
+            return false;
+        }
+    },
+
+    async requestExactAlarmPermission(): Promise<boolean> {
+        if (Capacitor.getPlatform() !== 'android') return true;
+
+        try {
+            const status = await LocalNotifications.changeExactNotificationSetting();
+            await Preferences.set({ key: 'exactAlarmPermission', value: status.exact_alarm });
+            return status.exact_alarm === 'granted';
+        } catch (error) {
+            console.error('Failed to request exact alarm setting:', error);
+            return false;
+        }
+    },
+
     async validateSoundFiles(): Promise<{adzan: boolean, adzan_subuh: boolean}> {
         // Check if sound files are available in the native resources
         return {
@@ -73,15 +95,18 @@ export const NotificationService = {
         };
     },
 
-    async updatePrayerNotifications(prayerTimes: PrayerTimes) {
-        // Check if notification times are still valid for today
+    async updatePrayerNotifications(prayerTimes: PrayerTimes, options?: { force?: boolean }) {
         const today = new Date().toDateString();
-        
-        // Always update if not scheduled today or if forced
-        // The user logic suggests: "App dibuka -> hitung / fetch -> hapus -> schedule"
-        
+        const { value: lastScheduledDate } = await Preferences.get({ key: 'lastPrayerScheduleDate' });
+
+        if (!options?.force && lastScheduledDate === today) {
+            console.log('Prayer notifications already scheduled for today, skipping reschedule');
+            return;
+        }
+
         console.log('Updating prayer notifications for:', today);
         await this.schedulePrayerNotifications(prayerTimes);
+        await Preferences.set({ key: 'lastPrayerScheduleDate', value: today });
     },
 
     async schedulePrayerNotifications(prayerTimes: PrayerTimes) {
@@ -124,4 +149,3 @@ export const NotificationService = {
         }
     }
 };
-

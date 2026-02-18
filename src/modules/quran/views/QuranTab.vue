@@ -25,6 +25,18 @@
       </div>
 
       <div class="surah-list-container" v-else>
+        <div v-if="lastRead" class="last-read-card premium-card">
+          <div class="last-read-info">
+            <p class="last-read-label">{{ $t('quran.last_read') }}</p>
+            <h3>{{ lastRead.surahName }}</h3>
+            <p>{{ $t('quran.surah_ayah_info', { surah: lastRead.surahNumber, ayah: lastRead.ayahNumber }) }}</p>
+          </div>
+          <div class="last-read-actions">
+            <ion-button size="small" @click.stop="continueLastRead">{{ $t('quran.continue_reading') }}</ion-button>
+            <ion-button size="small" fill="clear" color="medium" @click.stop="resetLastRead">{{ $t('quran.reset_last_read') }}</ion-button>
+          </div>
+        </div>
+
         <div 
           v-for="surah in filteredSurahs" 
           :key="surah.nomor" 
@@ -35,7 +47,10 @@
             <div class="surah-number-badge glass-effect">{{ surah.nomor }}</div>
             <div class="surah-meta">
               <h3>{{ surah.namaLatin }}</h3>
-              <p>{{ surah.arti }} • {{ surah.jumlahAyat }} Ayat</p>
+              <p>{{ surah.arti }} • {{ $t('quran.ayah_count', { count: surah.jumlahAyat }) }}</p>
+              <p v-if="lastRead?.surahNumber === surah.nomor" class="last-read-tag">
+                {{ $t('quran.last_ayah', { ayah: lastRead.ayahNumber }) }}
+              </p>
             </div>
           </div>
           <div class="surah-info-right">
@@ -46,7 +61,7 @@
       
       <div v-if="!loading && filteredSurahs.length === 0" class="empty-state ion-padding ion-text-center">
         <ion-icon :icon="book" class="empty-icon" />
-        <p>Tidak ada surah yang ditemukan.</p>
+        <p>{{ $t('quran.no_surah_found') }}</p>
       </div>
 
     </ion-content>
@@ -54,19 +69,23 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar, IonRefresher, IonRefresherContent, IonSpinner, IonIcon, useIonRouter } from '@ionic/vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonSearchbar, IonRefresher, IonRefresherContent, IonSpinner, IonIcon, IonButton, useIonRouter, onIonViewWillEnter } from '@ionic/vue';
 import { book } from 'ionicons/icons';
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { QuranService, Surah } from '@/modules/quran/services/quran-api';
+import { QuranLastRead, QuranReadingProgressService } from '@/modules/quran/services/quran-reading-progress';
 
 
 const router = useIonRouter();
+const { t } = useI18n();
  
 
 const surahs = ref<Surah[]>([]);
 const searchQuery = ref('');
 const loading = ref(true);
-const searchPlaceholder = 'Cari Surah...'; 
+const searchPlaceholder = computed(() => t('quran.search_surah'));
+const lastRead = ref<QuranLastRead | null>(null);
 
 const filteredSurahs = computed(() => {
   if (!searchQuery.value) return surahs.value;
@@ -88,8 +107,27 @@ const handleRefresh = async (event: CustomEvent) => {
   event.detail.complete();
 };
 
+const loadLastRead = async () => {
+  lastRead.value = await QuranReadingProgressService.getLastRead();
+};
+
+const continueLastRead = () => {
+  if (!lastRead.value) return;
+  router.push(`/tabs/quran/surah/${lastRead.value.surahNumber}?ayah=${lastRead.value.ayahNumber}`);
+};
+
+const resetLastRead = async () => {
+  await QuranReadingProgressService.clearLastRead();
+  lastRead.value = null;
+};
+
 onMounted(() => {
   loadData();
+  loadLastRead();
+});
+
+onIonViewWillEnter(() => {
+  loadLastRead();
 });
 </script>
 
@@ -117,6 +155,38 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.last-read-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
+  background: rgba(var(--ion-color-primary-rgb), 0.07);
+}
+
+.last-read-label {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--ion-color-primary);
+  font-weight: 700;
+}
+
+.last-read-info h3 {
+  margin: 4px 0;
+  font-size: 1rem;
+}
+
+.last-read-info p {
+  margin: 0;
+}
+
+.last-read-actions {
+  display: flex;
+  align-items: center;
 }
 
 .surah-card {
@@ -160,6 +230,11 @@ onMounted(() => {
   font-size: 0.8rem;
   color: var(--ion-color-medium);
   font-weight: 500;
+}
+
+.last-read-tag {
+  color: var(--ion-color-primary) !important;
+  font-weight: 700 !important;
 }
 
 .arabic-name {

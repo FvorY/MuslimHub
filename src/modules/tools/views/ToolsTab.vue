@@ -11,7 +11,7 @@
       <div class="content-wrapper">
         <header class="hero-section">
           <h1 class="text-gradient">{{ $t('tabs.tools') }}</h1>
-          <p class="subtitle">Berbagai alat bantu untuk menunjang aktivitas ibadah harianmu</p>
+          <p class="subtitle">{{ $t('tools.subtitle') }}</p>
         </header>
 
         <section class="menu-grid">
@@ -21,7 +21,7 @@
             </div>
             <div class="card-content">
               <h3>{{ $t('tools.zakat_calculator') }}</h3>
-              <p>Hitung kewajiban zakat mal dan penghasilan</p>
+              <p>{{ $t('tools.zakat_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -32,7 +32,7 @@
             </div>
             <div class="card-content">
               <h3>{{ $t('tools.ramadan_companion') }}</h3>
-              <p>Pantau progres puasa dan amalan Ramadan</p>
+              <p>{{ $t('tools.ramadan_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -53,8 +53,8 @@
               <ion-icon :icon="time"></ion-icon>
             </div>
             <div class="card-content">
-              <h3>Jadwal Imsyak</h3>
-              <p>Lihat jadwal imsak Ramadhan berdasarkan lokasi</p>
+              <h3>{{ $t('tools.imsyak_schedule') }}</h3>
+              <p>{{ $t('tools.imsyak_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>

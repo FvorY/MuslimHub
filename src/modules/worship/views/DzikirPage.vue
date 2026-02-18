@@ -12,7 +12,7 @@
     <ion-content :fullscreen="true">
       <div class="dzikir-container ion-padding">
         
-        <div class="section-label">DZIKIR HARIAN</div>
+        <div class="section-label">{{ $t('worship.dzikir_daily') }}</div>
         
         <div class="dzikir-grid">
           <div class="dzikir-card premium-card morning" @click="router.push('/tabs/worship/tasbih/pagi')">
@@ -20,8 +20,8 @@
               <ion-icon :icon="sunny" />
             </div>
             <div class="dzikir-meta">
-              <h3>Dzikir Pagi</h3>
-              <p>Mulai hari dengan zikir</p>
+              <h3>{{ $t('worship.dzikir_morning') }}</h3>
+              <p>{{ $t('worship.dzikir_morning_description') }}</p>
             </div>
             <div class="card-arrow"><ion-icon :icon="chevronForward" /></div>
           </div>
@@ -31,8 +31,8 @@
               <ion-icon :icon="moon" />
             </div>
             <div class="dzikir-meta">
-              <h3>Dzikir Petang</h3>
-              <p>Zikir sore hari</p>
+              <h3>{{ $t('worship.dzikir_evening') }}</h3>
+              <p>{{ $t('worship.dzikir_evening_description') }}</p>
             </div>
             <div class="card-arrow"><ion-icon :icon="chevronForward" /></div>
           </div>
@@ -42,22 +42,22 @@
               <ion-icon :icon="book" />
             </div>
             <div class="dzikir-meta">
-              <h3>Dzikir Shalat</h3>
-              <p>Zikir setelah shalat fardhu</p>
+              <h3>{{ $t('worship.dzikir_prayer') }}</h3>
+              <p>{{ $t('worship.dzikir_prayer_description') }}</p>
             </div>
             <div class="card-arrow"><ion-icon :icon="chevronForward" /></div>
           </div>
         </div>
 
-        <div class="section-label ion-margin-top">LAINNYA</div>
+        <div class="section-label ion-margin-top">{{ $t('worship.others') }}</div>
         
         <div class="dzikir-card premium-card custom" @click="router.push('/tabs/worship/tasbih/custom')">
           <div class="icon-box glass-effect">
             <ion-icon :icon="fingerPrint" />
           </div>
           <div class="dzikir-meta">
-            <h3>Tasbih Digital</h3>
-            <p>Hitung zikir secara mandiri</p>
+            <h3>{{ $t('worship.tasbih_digital') }}</h3>
+            <p>{{ $t('worship.tasbih_digital_description') }}</p>
           </div>
           <div class="card-arrow"><ion-icon :icon="chevronForward" /></div>
         </div>

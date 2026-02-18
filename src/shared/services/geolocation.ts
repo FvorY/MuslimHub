@@ -3,7 +3,19 @@ import { Geolocation } from '@capacitor/geolocation';
 export const GeolocationService = {
     async getCurrentPosition() {
         try {
-            const coordinates = await Geolocation.getCurrentPosition();
+            const status = await GeolocationService.requestPermissions();
+            const hasPermission =
+                status.location === 'granted' || status.coarseLocation === 'granted';
+
+            if (!hasPermission) {
+                throw new Error('Location permission not granted');
+            }
+
+            const coordinates = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            });
             return coordinates;
         } catch (e) {
             console.error('Error getting location', e);

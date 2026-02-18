@@ -24,7 +24,7 @@
         <div class="prayer-info">
           <div class="location-chip glass-effect" @click="refreshLocation">
             <ion-icon :icon="location" />
-            <span>{{ locationName || '...' }}</span>
+            <span>{{ locationName || $t('home.auto_detected') }}</span>
             <ion-icon :icon="refresh" class="refresh-icon" />
           </div>
           <span class="label">{{ $t('home.next_prayer') }}</span>
@@ -32,7 +32,7 @@
           <h2 v-else>...</h2>
           <div class="time-display" v-if="nextPrayer">
             <span class="time">{{ nextPrayer.time }}</span>
-            <span class="countdown-badge glass-effect">{{ formatDuration(nextPrayer.remaining) }} lagi</span>
+            <span class="countdown-badge glass-effect">{{ formatDuration(nextPrayer.remaining) }} {{ $t('home.countdown_suffix') }}</span>
           </div>
         </div>
         <div class="icon-bg-float">
@@ -46,32 +46,32 @@
           <div class="icon-wrapper primary-bg">
             <ion-icon :icon="time" />
           </div>
-          <span>Shalat</span>
+          <span>{{ $t('home.prayer_times') }}</span>
         </div>
         <div class="action-item" @click="router.push('/tabs/worship/dzikir')">
           <div class="icon-wrapper secondary-bg">
             <ion-icon :icon="fingerPrint" />
           </div>
-          <span>Dzikir</span>
+          <span>{{ $t('home.dzikir') }}</span>
         </div>
         <div class="action-item" @click="router.push('/tabs/worship/qibla')">
           <div class="icon-wrapper tertiary-bg">
             <ion-icon :icon="compass" />
           </div>
-          <span>Kiblat</span>
+          <span>{{ $t('home.qibla') }}</span>
         </div>
         <div class="action-item" @click="router.push('/tabs/quran')">
           <div class="icon-wrapper quaternary-bg">
             <ion-icon :icon="book" />
           </div>
-          <span>Quran</span>
+          <span>{{ $t('tabs.quran') }}</span>
         </div>
       </div>
 
       <!-- Daily Inspiration -->
       <div class="inspiration-section ion-margin" v-if="randomAyah">
         <div class="section-header">
-          <h3>Inspirasi Hari Ini</h3>
+          <h3>{{ $t('home.inspiration_today') }}</h3>
           <ion-button fill="clear" size="small" @click="toggleAudio(randomAyah.ayah)" class="audio-btn">
             <ion-icon :icon="playingAyahNumber === randomAyah.ayah.nomorAyat ? pause : play" slot="icon-only" />
           </ion-button>
@@ -87,7 +87,7 @@
       </div>
 
       <div class="footer-info ion-padding-bottom ion-text-center">
-        <p>MuslimHub v0.1.0 • Built for Ummah</p>
+        <p>MuslimHub v0.1.0 • {{ $t('home.footer_tagline') }}</p>
       </div>
     </ion-content>
   </ion-page>
@@ -103,7 +103,7 @@ import { QuranService, Surah, Ayah } from '@/modules/quran/services/quran-api';
 import { SmartLocationService } from '@/shared/services/smart-location';
 
 const router = useIonRouter();
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 
 const nextPrayer = ref<{ name: string, time: string, remaining: number } | null>(null);
 const locationName = ref<string>('');
@@ -116,15 +116,16 @@ const currentDate = computed(() => {
 });
 
 const hijriDate = computed(() => {
-  return new Intl.DateTimeFormat('id-TN-u-ca-islamic-uma', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  const lang = locale.value === 'en' ? 'en-US-u-ca-islamic-umalqura' : 'id-ID-u-ca-islamic-umalqura';
+  return new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
 });
 
 const greetingText = computed(() => {
   const hour = new Date().getHours();
-  if (hour < 11) return 'Selamat Pagi';
-  if (hour < 15) return 'Selamat Siang';
-  if (hour < 19) return 'Selamat Sore';
-  return 'Selamat Malam';
+  if (hour < 11) return t('home.greeting_morning');
+  if (hour < 15) return t('home.greeting_afternoon');
+  if (hour < 19) return t('home.greeting_evening');
+  return t('home.greeting_night');
 });
 
 const cachedPrayerTimes = ref<any>(null);
@@ -141,7 +142,7 @@ const loadData = async () => {
     if (times) {
       cachedPrayerTimes.value = times;
       nextPrayer.value = await PrayerTimeService.getNextPrayer(times);
-      locationName.value = times.city || location.city || 'Auto Detected';
+      locationName.value = times.city || location.city || '';
     }
     
     // Update lokasi di background jika menggunakan cache atau default
@@ -167,7 +168,7 @@ const handleRefresh = async (event: CustomEvent) => {
 const formatDuration = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}j ${m}m`;
+  if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 };
 
@@ -221,10 +222,10 @@ const refreshLocation = async () => {
     const location = await SmartLocationService.getLocation();
     
     // Update jadwal sholat dengan lokasi baru
-    const times = await PrayerTimeService.getPrayerTimes(location.latitude, location.longitude);
+    const times = await PrayerTimeService.getPrayerTimes(location.latitude, location.longitude, { force: true });
     if (times) {
       nextPrayer.value = await PrayerTimeService.getNextPrayer(times);
-      locationName.value = times.city || location.city || 'Auto Detected';
+      locationName.value = times.city || location.city || '';
     }
   } catch (e) {
     console.error('Refresh location failed', e);
@@ -263,12 +264,18 @@ onUnmounted(() => {
 .header-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
+}
+.greeting {
+  flex: 1;
+  min-width: 0;
 }
 .greeting h1 {
   margin: 0;
   font-size: 1.8rem;
   font-weight: 800;
+  line-height: 1.1;
 }
 .greeting p {
   margin: 4px 0 0;
@@ -282,6 +289,11 @@ onUnmounted(() => {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--ion-color-primary);
+  max-width: 48%;
+  text-align: left;
+  line-height: 1.3;
+  white-space: normal;
+  align-self: flex-start;
 }
 
 /* Hero Card Redesign */
@@ -417,6 +429,12 @@ onUnmounted(() => {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--ion-color-dark);
+  text-align: center;
+  line-height: 1.25;
+  min-height: 2.4em;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 /* Inspiration Section */

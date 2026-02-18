@@ -11,19 +11,19 @@
       <div class="content-wrapper">
         <header class="hero-section">
           <h1 class="text-gradient">{{ $t('tabs.settings') }}</h1>
-          <p class="subtitle">Sesuaikan aplikasi sesuai kebutuhanmu</p>
+          <p class="subtitle">{{ $t('settings.subtitle') }}</p>
         </header>
 
         <section class="settings-group">
-          <h2 class="group-title">General</h2>
+          <h2 class="group-title">{{ $t('settings.general') }}</h2>
           <div class="settings-card premium-card">
             <div class="setting-item">
               <div class="icon-wrapper gradient-dark">
                 <ion-icon :icon="moon"></ion-icon>
               </div>
               <div class="setting-info">
-                <h3>Dark Mode</h3>
-                <p>Ubah tampilan aplikasi menjadi gelap</p>
+                <h3>{{ $t('settings.dark_mode') }}</h3>
+                <p>{{ $t('settings.dark_mode_description') }}</p>
               </div>
               <ion-toggle :checked="isDark" @ionChange="toggleDark"></ion-toggle>
             </div>
@@ -34,7 +34,7 @@
               </div>
               <div class="setting-info">
                 <h3>{{ $t('settings.prayer_reminder') }}</h3>
-                <p>Aktifkan notifikasi waktu sholat</p>
+                <p>{{ $t('settings.prayer_reminder_description') }}</p>
               </div>
               <ion-toggle :checked="isReminder" @ionChange="toggleReminder"></ion-toggle>
             </div>
@@ -44,8 +44,8 @@
                 <ion-icon :icon="informationCircle"></ion-icon>
               </div>
               <div class="setting-info">
-                <h3>Bantuan Notifikasi</h3>
-                <p>Solusikan notifikasi yang tertunda</p>
+                <h3>{{ $t('settings.notification_help') }}</h3>
+                <p>{{ $t('settings.notification_help_description') }}</p>
               </div>
               <ion-icon :icon="chevronForward" color="medium"></ion-icon>
             </div>
@@ -55,8 +55,8 @@
                 <ion-icon :icon="language"></ion-icon>
               </div>
               <div class="setting-info">
-                <h3>Language</h3>
-                <p>Pilih bahasa aplikasi</p>
+                <h3>{{ $t('settings.language') }}</h3>
+                <p>{{ $t('settings.language_description') }}</p>
               </div>
               <ion-select :value="locale" @ionChange="changeLang($event.detail.value)" interface="popover">
                 <ion-select-option value="en">English</ion-select-option>
@@ -67,7 +67,7 @@
         </section>
 
         <section class="settings-group">
-          <h2 class="group-title">About</h2>
+          <h2 class="group-title">{{ $t('settings.about') }}</h2>
           <div class="settings-card premium-card">
             <div class="setting-item info-item">
               <div class="app-logo">
@@ -75,15 +75,15 @@
               </div>
               <div class="setting-info">
                 <h3>MuslimHub</h3>
-                <p>Version 0.1.0</p>
-                <p class="small">Production Build • Sidoarjo, Indonesia</p>
+                <p>{{ $t('settings.app_version', { version: '0.1.0' }) }}</p>
+                <p class="small">{{ $t('settings.app_build_info') }}</p>
               </div>
             </div>
           </div>
         </section>
 
         <div class="footer-note">
-          <p>© 2026 MuslimHub. Digunakan dengan penuh keberkahan.</p>
+          <p>© 2026 MuslimHub. {{ $t('settings.footer_note') }}</p>
         </div>
       </div>
     </ion-content>
@@ -130,11 +130,15 @@ const toggleReminder = async (event: any) => {
       try {
         // Initialize background notifications
         await NotificationService.initializeBackgroundNotifications();
+        const exactAlarmGranted = await NotificationService.checkExactAlarmPermission();
+        if (!exactAlarmGranted) {
+          await NotificationService.requestExactAlarmPermission();
+        }
         
         const pos = await GeolocationService.getCurrentPosition();
         const times = await PrayerTimeService.getPrayerTimes(pos.coords.latitude, pos.coords.longitude);
         if (times) {
-          await NotificationService.updatePrayerNotifications(times);
+          await NotificationService.updatePrayerNotifications(times, { force: true });
         }
       } catch (e) {
         console.error('Failed to schedule notifications', e);
@@ -356,4 +360,3 @@ body.dark .setting-item {
   border-bottom-color: var(--ion-color-step-150);
 }
 </style>
-

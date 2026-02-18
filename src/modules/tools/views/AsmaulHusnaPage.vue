@@ -121,7 +121,7 @@ import {
 } from 'ionicons/icons';
 import { AsmaulHusnaService, AsmaulHusnaItem } from '../services/asmaul-husna-service';
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 
 const asmaulHusnaList = ref<AsmaulHusnaItem[]>([]);
 const searchQuery = ref('');
@@ -202,7 +202,7 @@ const playSequentialAudio = async () => {
     
     // Show completion notification
     toastController.create({
-      message: 'Selesai memutar seluruh Asmaul Husna (99 nama)',
+      message: t('tools.asmaul_completed'),
       duration: 3000,
       position: 'bottom',
       color: 'success'
@@ -218,7 +218,7 @@ const playSequentialAudio = async () => {
     // Show notification for missing audio
     if (currentSequentialIndex === 0) {
       toastController.create({
-        message: `Audio untuk ${currentItem?.transliteration || 'item'} tidak tersedia`,
+        message: t('tools.asmaul_audio_unavailable', { name: currentItem?.transliteration || 'item' }),
         duration: 2000,
         position: 'bottom',
         color: 'warning'
@@ -258,7 +258,7 @@ const playSequentialAudio = async () => {
     if (isPlayingFullAudio.value) {
       // Show error notification
       const toast = await toastController.create({
-        message: `Error audio: ${currentItem.transliteration}`,
+        message: t('tools.asmaul_audio_error', { name: currentItem.transliteration }),
         duration: 2000,
         position: 'bottom',
         color: 'danger'
@@ -284,7 +284,7 @@ const playSequentialAudio = async () => {
     if (isPlayingFullAudio.value) {
       // Show error notification
       const toast = await toastController.create({
-        message: `Gagal memutar audio: ${currentItem.transliteration}`,
+        message: t('tools.asmaul_audio_error', { name: currentItem.transliteration }),
         duration: 2000,
         position: 'bottom',
         color: 'danger'
@@ -303,7 +303,7 @@ const playFullAudio = () => {
     console.warn('Asmaul Husna list is empty');
     
     toastController.create({
-      message: 'Data Asmaul Husna belum tersedia',
+      message: t('tools.asmaul_data_unavailable'),
       duration: 2000,
       position: 'bottom',
       color: 'warning'
@@ -317,7 +317,7 @@ const playFullAudio = () => {
   
   // Show start notification
   toastController.create({
-    message: 'Memulai pemutaran Asmaul Husna 1-99',
+    message: t('tools.asmaul_start_play'),
     duration: 2000,
     position: 'bottom',
     color: 'primary'

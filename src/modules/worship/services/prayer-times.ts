@@ -11,17 +11,53 @@ export interface PrayerTimes {
     imsyak: string;
     date: string;
     city?: string; // City name
+    latitude?: number;
+    longitude?: number;
 }
 
 const STORAGE_KEY_PRAYER_TIMES = 'muslimhub_prayer_times';
+const MAX_CACHE_DISTANCE_KM = 10;
+
+function normalizeTime(value: string): string {
+    const match = value?.match(/(\d{1,2}):(\d{1,2})/);
+    if (!match) return value;
+
+    const hour = match[1].padStart(2, '0');
+    const minute = match[2].padStart(2, '0');
+    return `${hour}:${minute}`;
+}
+
+function toRadians(value: number): number {
+    return (value * Math.PI) / 180;
+}
+
+function distanceInKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLng = toRadians(lng2 - lng1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+}
 
 export const PrayerTimeService = {
-    async getPrayerTimes(lat: number, lng: number): Promise<PrayerTimes | null> {
+    async getPrayerTimes(lat: number, lng: number, options?: { force?: boolean }): Promise<PrayerTimes | null> {
         // 1. Check cache for today
         const today = new Date().toISOString().split('T')[0];
         const cached = await StorageService.get<PrayerTimes>(STORAGE_KEY_PRAYER_TIMES);
-        if (cached && cached.date === today) {
-            return cached;
+        if (!options?.force && cached && cached.date === today) {
+            if (
+                typeof cached.latitude === 'number' &&
+                typeof cached.longitude === 'number'
+            ) {
+                const distance = distanceInKm(lat, lng, cached.latitude, cached.longitude);
+                if (distance <= MAX_CACHE_DISTANCE_KM) {
+                    return cached;
+                }
+            }
         }
 
         // 2. Fetch Online
@@ -36,14 +72,16 @@ export const PrayerTimeService = {
 
             const timings = response.data.data.timings;
             const result: PrayerTimes = {
-                subuh: timings.Fajr,
-                dzuhur: timings.Dhuhr,
-                ashar: timings.Asr,
-                maghrib: timings.Maghrib,
-                isya: timings.Isha,
-                imsyak: timings.Imsak,
+                subuh: normalizeTime(timings.Fajr),
+                dzuhur: normalizeTime(timings.Dhuhr),
+                ashar: normalizeTime(timings.Asr),
+                maghrib: normalizeTime(timings.Maghrib),
+                isya: normalizeTime(timings.Isha),
+                imsyak: normalizeTime(timings.Imsak),
                 date: today,
-                city: 'Auto Detected'
+                city: 'Auto Detected',
+                latitude: lat,
+                longitude: lng
             };
 
             await StorageService.set(STORAGE_KEY_PRAYER_TIMES, result);

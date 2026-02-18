@@ -70,10 +70,18 @@
        </div>
 
        <div class="history-section ion-padding" v-if="recentHistory.length > 0">
-         <h3>{{ t('tools.recent_activity') }}</h3>
+         <div class="section-header">
+           <h3>{{ t('tools.recent_activity') }}</h3>
+           <ion-button fill="clear" size="small" @click="resetRecentActivity">
+             {{ t('tools.reset_activity') }}
+           </ion-button>
+         </div>
          <div class="history-list">
            <div v-for="(day, index) in recentHistory" :key="index" class="history-item">
-             <div class="history-date">{{ formatDate(day.date) }}</div>
+             <div class="history-date-group">
+               <div class="history-date">{{ formatDate(day.date) }}</div>
+               <div class="history-activities">{{ getCompletedActivitiesText(day) }}</div>
+             </div>
              <div class="history-progress">
                <div class="progress-bar">
                  <div class="progress-fill" :style="{ width: `${(day.completed/day.total) * 100}%` }"></div>
@@ -111,6 +119,7 @@ interface HistoryDay {
   date: string;
   completed: number;
   total: number;
+  completedItemIds?: string[];
 }
 
 const checklist = ref<ChecklistItem[]>([
@@ -153,6 +162,13 @@ const toggleItem = async (item: ChecklistItem) => {
 const resetDaily = async () => {
   checklist.value.forEach(item => item.checked = false);
   await saveChecklist();
+};
+
+const resetRecentActivity = async () => {
+  await StorageService.set(STORAGE_KEY_HISTORY, []);
+  recentHistory.value = [];
+  streakDays.value = 0;
+  totalCompleted.value = 0;
 };
 
 const formatDate = (dateStr: string) => {
@@ -210,12 +226,14 @@ const loadHistory = async () => {
 const updateHistory = async () => {
   const today = new Date().toISOString().split('T')[0];
   const history = await StorageService.get<HistoryDay[]>(STORAGE_KEY_HISTORY) || [];
+  const completedItemIds = checklist.value.filter(item => item.checked).map(item => item.id);
   
   const todayIndex = history.findIndex(day => day.date === today);
   const todayData = {
     date: today,
     completed: completedTasks.value,
-    total: totalTasks.value
+    total: totalTasks.value,
+    completedItemIds
   };
 
   if (todayIndex >= 0) {
@@ -231,6 +249,18 @@ const updateHistory = async () => {
   recentHistory.value = filteredHistory.slice(-7);
   streakDays.value = calculateStreak(filteredHistory);
   totalCompleted.value = filteredHistory.reduce((sum, day) => sum + day.completed, 0);
+};
+
+const getCompletedActivitiesText = (day: HistoryDay): string => {
+  if (!day.completedItemIds || day.completedItemIds.length === 0) {
+    return t('tools.no_activity_detail');
+  }
+
+  const labelById = new Map(checklist.value.map(item => [item.id, item.label]));
+  return day.completedItemIds
+    .map(id => labelById.get(id))
+    .filter((label): label is string => Boolean(label))
+    .join(', ');
 };
 
 const calculateStreak = (history: HistoryDay[]): number => {
@@ -471,10 +501,11 @@ onIonViewWillEnter(() => {
 
 .history-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid #f3f4f6;
+  gap: 12px;
 }
 
 .history-item:last-child {
@@ -485,6 +516,17 @@ onIonViewWillEnter(() => {
   font-weight: 500;
   color: var(--ion-text-color);
   min-width: 60px;
+}
+
+.history-date-group {
+  min-width: 120px;
+}
+
+.history-activities {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--ion-color-medium);
+  line-height: 1.3;
 }
 
 .history-progress {

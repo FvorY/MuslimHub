@@ -11,7 +11,7 @@
       <div class="content-wrapper">
         <header class="hero-section">
           <h1 class="text-gradient">{{ $t('tabs.worship') }}</h1>
-          <p class="subtitle">Lengkapi ibadah harianmu dengan fitur pilihan</p>
+          <p class="subtitle">{{ $t('worship.subtitle') }}</p>
         </header>
 
         <section class="menu-grid">
@@ -21,7 +21,7 @@
             </div>
             <div class="card-content">
               <h3>{{ $t('home.prayer_times') }}</h3>
-              <p>Jadwal sholat akurat sesuai lokasi</p>
+              <p>{{ $t('worship.prayer_times_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -32,7 +32,7 @@
             </div>
             <div class="card-content">
               <h3>{{ $t('home.dzikir') }}</h3>
-              <p>Tasbih digital dan kumpulan dzikir</p>
+              <p>{{ $t('worship.dzikir_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -43,7 +43,7 @@
             </div>
             <div class="card-content">
               <h3>{{ $t('home.qibla') }}</h3>
-              <p>Temukan arah kiblat dengan mudah</p>
+              <p>{{ $t('worship.qibla_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -53,8 +53,30 @@
               <ion-icon :icon="book"></ion-icon>
             </div>
             <div class="card-content">
-              <h3>Doa</h3>
-              <p>Kumpulan doa-doa harian</p>
+              <h3>{{ $t('worship.doa') }}</h3>
+              <p>{{ $t('worship.doa_description') }}</p>
+            </div>
+            <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
+          </div>
+
+          <div class="menu-card premium-card" @click="router.push('/tabs/worship/kisah-nabi')">
+            <div class="icon-wrapper gradient-5">
+              <ion-icon :icon="library"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ $t('worship.kisah_nabi') }}</h3>
+              <p>{{ $t('worship.kisah_nabi_description') }}</p>
+            </div>
+            <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
+          </div>
+
+          <div class="menu-card premium-card" @click="router.push('/tabs/worship/tahlil')">
+            <div class="icon-wrapper gradient-6">
+              <ion-icon :icon="reader"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ $t('worship.tahlil') }}</h3>
+              <p>{{ $t('worship.tahlil_description') }}</p>
             </div>
             <ion-icon :icon="chevronForward" class="arrow-icon"></ion-icon>
           </div>
@@ -66,7 +88,7 @@
 
 <script setup lang="ts">
 import { IonPage, IonContent, IonIcon } from '@ionic/vue';
-import { time, fingerPrint, compass, chevronForward, book } from 'ionicons/icons';
+import { time, fingerPrint, compass, chevronForward, book, library, reader } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -145,6 +167,14 @@ const router = useRouter();
   background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 
+.gradient-5 {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
+
+.gradient-6 {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
 .card-content {
   flex: 1;
 }
@@ -173,4 +203,3 @@ body.dark .menu-card {
   border-color: var(--ion-color-step-150);
 }
 </style>
-

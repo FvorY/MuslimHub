@@ -2,11 +2,11 @@
   <ion-page>
     <ion-header class="ion-no-border translucent-header">
       <ion-toolbar class="transparent-toolbar">
-        <ion-buttons>
+        <ion-buttons slot="start">
           <ion-back-button default-href="/tabs/worship/dzikir" text="" class="back-btn"></ion-back-button>
         </ion-buttons>
         <ion-title>{{ title }}</ion-title>
-        <ion-buttons>
+        <ion-buttons slot="end">
           <ion-button @click.stop="resetCount" class="icon-btn">
             <ion-icon :icon="refresh" />
           </ion-button>
@@ -39,10 +39,10 @@
             
             <div class="counter-display" :class="{ pulsing: isTapping }">
               <div class="target-tag glass-effect" v-if="target > 0">
-                Target: {{ target }}
+                {{ t('worship.tasbih_target', { target }) }}
               </div>
               <span class="count-number">{{ count }}</span>
-              <div class="session-total">Total Sesi: {{ count }}</div>
+              <div class="session-total">{{ t('worship.tasbih_session_total', { count }) }}</div>
             </div>
           </div>
         </div>
@@ -50,7 +50,7 @@
         <div class="tap-instruction-area">
           <div class="tap-hint glass-effect">
             <ion-icon :icon="fingerPrint" />
-            <span>Sentuh di mana saja untuk menghitung</span>
+            <span>{{ t('worship.tasbih_tap_instruction') }}</span>
           </div>
         </div>
       </div>
@@ -64,12 +64,19 @@ import { refresh, fingerPrint } from 'ionicons/icons';
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { useI18n } from 'vue-i18n';
 
 const route = useRoute();
+const { t } = useI18n();
 const count = ref(0);
 const target = ref(33);
-const title = ref('Tasbih');
+const title = ref(t('worship.tasbih_digital'));
 const isTapping = ref(false);
+const CATEGORY_TOTALS = {
+  pagi: 19,
+  petang: 19,
+  shalat: 13
+} as const;
 
 const progress = computed(() => {
   if (target.value === 0) return 0;
@@ -87,16 +94,16 @@ watch(() => route.params.type, (newType) => {
 
 const updateMetadata = (type: string) => {
   if (type === 'pagi') {
-    title.value = 'Dzikir Pagi';
-    target.value = 100; 
+    title.value = t('worship.dzikir_morning');
+    target.value = CATEGORY_TOTALS.pagi;
   } else if (type === 'petang') {
-    title.value = 'Dzikir Petang';
-    target.value = 100;
+    title.value = t('worship.dzikir_evening');
+    target.value = CATEGORY_TOTALS.petang;
   } else if (type === 'shalat') {
-    title.value = 'Dzikir Shalat';
-    target.value = 33;
+    title.value = t('worship.dzikir_prayer');
+    target.value = CATEGORY_TOTALS.shalat;
   } else {
-    title.value = 'Tasbih Digital';
+    title.value = t('worship.tasbih_digital');
     target.value = 99;
   }
 };

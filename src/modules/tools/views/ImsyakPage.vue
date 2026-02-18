@@ -164,6 +164,40 @@ const detectingLocation = ref(false); // New loading state for location detectio
 const error = ref<string>('');
 const imsyakData = ref<ImsyakScheduleResponse['data'] | null>(null);
 
+const normalizeLocationName = (value: string): string => {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(kota|kabupaten|provinsi|daerah|khusus|istimewa)\b/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const findBestLocationMatch = (options: string[], detectedValue: string): string | null => {
+  if (!detectedValue) return null;
+
+  const normalizedDetected = normalizeLocationName(detectedValue);
+  if (!normalizedDetected) return null;
+
+  const exactMatch = options.find((option) => normalizeLocationName(option) === normalizedDetected);
+  if (exactMatch) return exactMatch;
+
+  const partialMatch = options.find((option) => {
+    const normalizedOption = normalizeLocationName(option);
+    return normalizedOption.includes(normalizedDetected) || normalizedDetected.includes(normalizedOption);
+  });
+  if (partialMatch) return partialMatch;
+
+  return null;
+};
+
+const ensureProvincesLoaded = async () => {
+  if (provinces.value.length > 0 || loadingProvinces.value) return;
+  await loadProvinces();
+};
+
 const detectAndLoadLocation = async () => {
   detectingLocation.value = true;
   error.value = '';
@@ -171,26 +205,37 @@ const detectAndLoadLocation = async () => {
     console.log('Detecting location...');
     const locationResult = await SmartLocationService.getLocation();
 
-    if (locationResult.latitude && locationResult.longitude) {
+    if (Number.isFinite(locationResult.latitude) && Number.isFinite(locationResult.longitude)) {
       console.log('Location detected:', locationResult);
       const geocoded = await GeocodingService.reverseGeocode(locationResult.latitude, locationResult.longitude);
 
-      if (geocoded) {
-          console.log('Geocoded location:', geocoded);
+      if (geocoded?.province && geocoded?.city) {
+        console.log('Geocoded location:', geocoded);
         const detectedProvince = geocoded.province;
         const detectedCity = geocoded.city;
 
+        await ensureProvincesLoaded();
+        const matchedProvince = findBestLocationMatch(provinces.value, detectedProvince);
+        if (!matchedProvince) {
+          error.value = t('tools.error_province_not_found', { province: detectedProvince });
+          return;
+        }
+
         // Set the province in the UI
-        selectedProvince.value = detectedProvince;
+        selectedProvince.value = matchedProvince;
 
         // Load the list of cities for the detected province
         loadingCities.value = true;
-        const validCities = await ImsyakApiService.getCities(detectedProvince);
-        cities.value = validCities;
-        loadingCities.value = false;
+        let validCities: string[] = [];
+        try {
+          validCities = await ImsyakApiService.getCities(matchedProvince);
+          cities.value = validCities;
+        } finally {
+          loadingCities.value = false;
+        }
 
         // Find the best match for the detected city in the valid list
-        const matchedCity = validCities.find(c => c.toLowerCase().includes(detectedCity.toLowerCase()));
+        const matchedCity = findBestLocationMatch(validCities, detectedCity);
 
         if (matchedCity) {
           // If a match is found, set it and load the schedule
@@ -199,7 +244,7 @@ const detectAndLoadLocation = async () => {
           await savePreferences();
         } else {
           // If no city matches, inform the user to select manually
-          error.value = t('tools.error_city_not_found', { city: detectedCity, province: detectedProvince });
+          error.value = t('tools.error_city_not_found', { city: detectedCity, province: matchedProvince });
           selectedCity.value = ''; // Clear city selection
         }
       } else {
@@ -224,7 +269,7 @@ const loadProvinces = async () => {
     console.log('Provinces fetched:', provinces.value);
   } catch (err) {
     console.error('Error loading provinces:', err);
-    error.value = 'Gagal memuat daftar provinsi';
+    error.value = t('tools.error_load_provinces');
   } finally {
     loadingProvinces.value = false;
   }
@@ -245,7 +290,7 @@ const onProvinceChange = async () => {
     console.log('Cities fetched:', cities.value);
   } catch (err) {
     console.error('Error loading cities:', err);
-    error.value = 'Gagal memuat daftar kabupaten/kota';
+    error.value = t('tools.error_load_cities');
   } finally {
     loadingCities.value = false;
   }
@@ -276,7 +321,7 @@ const loadImsyakSchedule = async () => {
     console.log('Imsyak data assigned:', imsyakData.value);
   } catch (err) {
     console.error('Error loading imsak schedule:', err);
-    error.value = 'Gagal memuat jadwal imsak';
+    error.value = t('tools.error_load_imsyak');
   } finally {
     loading.value = false;
   }

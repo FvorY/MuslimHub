@@ -5,14 +5,14 @@
         <ion-buttons slot="start">
           <ion-back-button default-href="/tabs/worship"></ion-back-button>
         </ion-buttons>
-        <ion-title>Qibla Finder</ion-title>
+        <ion-title>{{ t('worship.qibla_finder') }}</ion-title>
       </ion-toolbar>
     </ion-header>
     
     <ion-content class="ion-padding">
       <div class="redirect-container">
         <ion-text color="medium">
-          <p>Mengarahkan ke Qibla Finder...</p>
+          <p>{{ t('worship.redirecting_qibla') }}</p>
         </ion-text>
         <ion-spinner name="crescent"></ion-spinner>
       </div>
@@ -23,6 +23,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton, IonText, IonSpinner } from '@ionic/vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 onMounted(() => {
   window.location.href = 'https://qiblafinder.withgoogle.com/intl/en/finder/ar';

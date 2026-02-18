@@ -44,6 +44,14 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/modules/worship/views/DoaPage.vue')
       },
       {
+        path: 'worship/kisah-nabi',
+        component: () => import('@/modules/worship/views/KisahNabiPage.vue')
+      },
+      {
+        path: 'worship/tahlil',
+        component: () => import('@/modules/worship/views/TahlilPage.vue')
+      },
+      {
         path: 'quran',
         component: () => import('@/modules/quran/views/QuranTab.vue')
       },
