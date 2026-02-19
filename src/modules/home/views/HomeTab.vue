@@ -72,7 +72,7 @@
       <div class="inspiration-section ion-margin" v-if="randomAyah">
         <div class="section-header">
           <h3>{{ $t('home.inspiration_today') }}</h3>
-          <ion-button fill="clear" size="small" @click="toggleAudio(randomAyah.ayah)" class="audio-btn">
+          <ion-button fill="clear" size="small" @click="toggleAudio(randomAyah)" class="audio-btn">
             <ion-icon :icon="playingAyahNumber === randomAyah.ayah.nomorAyat ? pause : play" slot="icon-only" />
           </ion-button>
         </div>
@@ -99,7 +99,7 @@ import { time, fingerPrint, compass, location, moon, book, play, pause, refresh 
 import { computed, onMounted, ref, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PrayerTimeService } from '@/modules/worship/services/prayer-times';
-import { QuranService, Surah, Ayah } from '@/modules/quran/services/quran-api';
+import { QuranService, Surah, Ayah, getAyahAudioUrl, getSurahAudioUrl } from '@/modules/quran/services/quran-api';
 import { SmartLocationService } from '@/shared/services/smart-location';
 
 const router = useIonRouter();
@@ -172,7 +172,9 @@ const formatDuration = (seconds: number) => {
   return `${m}m`;
 };
 
-const toggleAudio = (ayah: Ayah) => {
+const toggleAudio = (item: { surah: Surah, ayah: Ayah }) => {
+  const { surah, ayah } = item;
+
   // If clicking the current playing ayah
   if (playingAyahNumber.value === ayah.nomorAyat && currentAudio.value) {
     currentAudio.value.pause();
@@ -186,12 +188,9 @@ const toggleAudio = (ayah: Ayah) => {
     currentAudio.value = null;
   }
 
-  // Get audio URL (handling equran.id format which usually has '05' (Misyari) or the first available key)
-  let audioUrl = '';
-  if (typeof ayah.audio === 'string') {
-    audioUrl = ayah.audio;
-  } else if (typeof ayah.audio === 'object' && ayah.audio !== null) {
-    audioUrl = ayah.audio['05'] || Object.values(ayah.audio)[0] as string;
+  let audioUrl = getAyahAudioUrl(ayah);
+  if (!audioUrl) {
+    audioUrl = getSurahAudioUrl(surah);
   }
 
   if (!audioUrl) {
@@ -212,7 +211,10 @@ const toggleAudio = (ayah: Ayah) => {
 
   currentAudio.value = audio;
   playingAyahNumber.value = ayah.nomorAyat;
-  audio.play();
+  audio.play().catch((error) => {
+    console.error('Audio play rejected', error);
+    playingAyahNumber.value = null;
+  });
 };
 
 const refreshLocation = async () => {
