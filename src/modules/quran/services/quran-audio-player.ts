@@ -29,18 +29,18 @@ class QuranAudioPlayer {
 
   // Get audio URL from ayah data (similar to existing logic)
   private getAudioUrl(ayah: Ayah): string {
-    return getAyahAudioUrl(ayah);
+    return getAyahAudioUrl(ayah, this.currentSurahNumber ?? undefined);
   }
 
   private updateState(updates: Partial<AudioPlayerState>) {
     if (updates.isPlaying !== undefined && this.callbacks.onPlayStateChange) {
       this.callbacks.onPlayStateChange(updates.isPlaying);
     }
-    if (updates.currentAyahIndex !== undefined && this.callbacks.onAyahChange) {
-      this.callbacks.onAyahChange(updates.currentAyahIndex!);
+    if (updates.currentAyahIndex !== undefined && updates.currentAyahIndex !== null && this.callbacks.onAyahChange) {
+      this.callbacks.onAyahChange(updates.currentAyahIndex);
       // Trigger scroll callback when ayah changes
       if (this.callbacks.onScrollToAyah) {
-        this.callbacks.onScrollToAyah(updates.currentAyahIndex!);
+        this.callbacks.onScrollToAyah(updates.currentAyahIndex);
       }
     }
     if (updates.error !== undefined && this.callbacks.onError && updates.error !== null) {
@@ -58,7 +58,16 @@ class QuranAudioPlayer {
     const audioUrl = this.getAudioUrl(ayah);
     
     if (!audioUrl) {
-      this.updateState({ error: 'No audio available for this ayah' });
+      // Skip ayahs without audio and continue to next available ayah.
+      if (ayahIndex + 1 < this.ayahs.length) {
+        this.playAyah(ayahIndex + 1);
+        return;
+      }
+
+      this.stop();
+      if (this.callbacks.onComplete) {
+        this.callbacks.onComplete();
+      }
       return;
     }
 
@@ -70,6 +79,8 @@ class QuranAudioPlayer {
 
     this.isLoading = true;
     this.currentAyahIndex = ayahIndex;
+    // Update active ayah immediately so UI can reflect the current target ayah.
+    this.updateState({ currentAyahIndex: ayahIndex });
 
     try {
       // Request wake lock when starting to play
@@ -92,6 +103,11 @@ class QuranAudioPlayer {
 
       this.audio.onerror = (e) => {
         console.error('Audio playback error', e);
+        if (ayahIndex + 1 < this.ayahs.length) {
+          this.playAyah(ayahIndex + 1);
+          return;
+        }
+
         this.updateState({ error: 'Failed to play audio' });
         this.isPlaying = false;
         this.isLoading = false;
@@ -99,7 +115,7 @@ class QuranAudioPlayer {
         screenWakeLockService.releaseWakeLock();
       };
 
-      this.audio.oncanplay = () => {
+      this.audio.onplay = () => {
         this.isLoading = false;
         this.isPlaying = true;
         this.updateState({ 
@@ -107,6 +123,12 @@ class QuranAudioPlayer {
           currentAyahIndex: ayahIndex,
           isLoading: false 
         });
+      };
+
+      this.audio.onpause = () => {
+        if (!this.audio) return;
+        this.isPlaying = false;
+        this.updateState({ isPlaying: false });
       };
 
       await this.audio.play();

@@ -188,7 +188,7 @@ const toggleAudio = (item: { surah: Surah, ayah: Ayah }) => {
     currentAudio.value = null;
   }
 
-  let audioUrl = getAyahAudioUrl(ayah);
+  let audioUrl = getAyahAudioUrl(ayah, surah.nomor);
   if (!audioUrl) {
     audioUrl = getSurahAudioUrl(surah);
   }

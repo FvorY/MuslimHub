@@ -47,12 +47,18 @@
         </div>
 
         <div class="ayah-list">
-          <div v-for="(ayat, index) in surah.ayat" :key="ayat.nomorAyat" :id="`ayah-${index}`" class="ayah-block">
+          <div
+            v-for="(ayat, index) in surah.ayat"
+            :key="ayat.nomorAyat"
+            :id="`ayah-${index}`"
+            class="ayah-block"
+            :class="{ 'ayah-block-playing': isAyahPlaying(index) }"
+          >
             <div class="ayah-header">
                <div class="ayah-number-tag">{{ surah.nomor }}:{{ ayat.nomorAyat }}</div>
                <div class="ayah-actions-dots">
-                 <ion-button fill="clear" size="small" @click="toggleAudio(ayat)">
-                   <ion-icon :icon="playingAyahNumber === ayat.nomorAyat ? pause : play" slot="icon-only" />
+                 <ion-button fill="clear" size="small" @click="toggleAudio(index)">
+                   <ion-icon :icon="isAyahPlaying(index) ? pause : play" slot="icon-only" />
                  </ion-button>
                  <ion-button fill="clear" size="small" @click="setLastReadMark(ayat)">
                    <ion-icon :icon="lastReadAyahNumber === ayat.nomorAyat ? bookmark : bookmarkOutline" slot="icon-only" />
@@ -82,13 +88,13 @@
         <!-- Full Surah Audio Controls -->
         <div v-if="isFullSurahPlaying || currentAyahIndex !== null" class="audio-controls-bar">
           <div class="audio-controls">
-            <ion-button fill="clear" size="small" :disabled="isUsingSurahLevelAudio" @click="quranAudioPlayer.previousAyah()">
+            <ion-button fill="clear" size="small" :disabled="isUsingSurahLevelAudio || currentAyahIndex === null || currentAyahIndex <= 0" @click="playPreviousAyah">
               <ion-icon :icon="playSkipBack" slot="icon-only" />
             </ion-button>
             <ion-button fill="clear" size="small" @click="toggleFullSurahPlay">
               <ion-icon :icon="isFullSurahPlaying ? pauseCircle : playCircle" slot="icon-only" />
             </ion-button>
-            <ion-button fill="clear" size="small" :disabled="isUsingSurahLevelAudio" @click="quranAudioPlayer.nextAyah()">
+            <ion-button fill="clear" size="small" :disabled="isUsingSurahLevelAudio || currentAyahIndex === null || !surah || currentAyahIndex >= surah.ayat.length - 1" @click="playNextAyah">
               <ion-icon :icon="playSkipForward" slot="icon-only" />
             </ion-button>
           </div>
@@ -128,7 +134,6 @@ const { t } = useI18n();
 const surah = ref<SurahDetail | null>(null);
 const loading = ref(true);
 
-const currentAudio = ref<HTMLAudioElement | null>(null);
 const surahLevelAudio = ref<HTMLAudioElement | null>(null);
 const playingAyahNumber = ref<number | null>(null);
 const lastReadAyahNumber = ref<number | null>(null);
@@ -146,100 +151,192 @@ const stopSurahLevelAudio = () => {
     isUsingSurahLevelAudio.value = false;
 };
 
-const toggleAudio = (ayah: Ayah) => {
-    // If clicking the current playing ayah
-    if (playingAyahNumber.value === ayah.nomorAyat && currentAudio.value) {
-        currentAudio.value.pause();
-        playingAyahNumber.value = null;
+const isAyahPlaying = (ayahIndex: number): boolean => {
+    if (!surah.value || !surah.value.ayat[ayahIndex]) return false;
+    const ayahNumber = surah.value.ayat[ayahIndex].nomorAyat;
+
+    if (isUsingSurahLevelAudio.value) {
+        return isFullSurahPlaying.value && currentAyahIndex.value === ayahIndex;
+    }
+
+    return isFullSurahPlaying.value && playingAyahNumber.value === ayahNumber;
+};
+
+const startAyahPlayback = (startIndex = 0) => {
+    if (!surah.value || !surah.value.ayat.length) return;
+    if (startIndex < 0 || startIndex >= surah.value.ayat.length) return;
+
+    stopSurahLevelAudio();
+    quranAudioPlayer.stop();
+    quranAudioPlayer.playSurah(surah.value.ayat, surah.value.nomor, startIndex);
+    currentAyahIndex.value = startIndex;
+    playingAyahNumber.value = surah.value.ayat[startIndex].nomorAyat;
+    isFullSurahPlaying.value = true;
+    isUsingSurahLevelAudio.value = false;
+    scrollToAyah(startIndex);
+    enableBackgroundAudio();
+};
+
+const toggleAudio = (ayahIndex: number) => {
+    if (!surah.value) return;
+    if (ayahIndex < 0 || ayahIndex >= surah.value.ayat.length) return;
+
+    const ayah = surah.value.ayat[ayahIndex];
+
+    // Always leave surah-level audio when user explicitly taps an ayah.
+    stopSurahLevelAudio();
+
+    const state = quranAudioPlayer.getState();
+    const isSameAyah =
+        state.currentSurahNumber === surah.value.nomor &&
+        state.currentAyahIndex === ayahIndex;
+
+    // Toggle pause/resume when tapping the currently active ayah
+    if (isSameAyah) {
+        if (state.isPlaying) {
+            quranAudioPlayer.pause();
+            playingAyahNumber.value = null;
+            isFullSurahPlaying.value = false;
+        } else {
+            stopSurahLevelAudio();
+            quranAudioPlayer.resume();
+            playingAyahNumber.value = ayah.nomorAyat;
+            scrollToAyah(ayahIndex);
+            enableBackgroundAudio();
+        }
         return;
     }
 
-    // Stop previous audio if exists
-    if (currentAudio.value) {
-        currentAudio.value.pause();
-        currentAudio.value = null;
-    }
-    quranAudioPlayer.stop();
-    stopSurahLevelAudio();
+    const ayahAudioUrl = getAyahAudioUrl(ayah, surah.value.nomor);
+    const hasAyahAudio = surah.value.ayat.some((item) => !!getAyahAudioUrl(item, surah.value!.nomor));
 
-    const audioUrl = getAyahAudioUrl(ayah);
+    // Preferred flow: play sequentially from selected ayah and continue to next ayahs
+    if (ayahAudioUrl || hasAyahAudio) {
+        startAyahPlayback(ayahIndex);
+        return;
+    }
+
+    // Fallback: if ayah audio is unavailable, use surah-level audio
+    stopSurahLevelAudio();
+    quranAudioPlayer.stop();
+    const audioUrl = getSurahAudioUrl(surah.value);
 
     if (!audioUrl) {
         console.warn('No audio found for this ayah');
         return;
     }
 
-    const audio = new Audio(audioUrl);
-    
-    audio.onended = () => {
+    surahLevelAudio.value = new Audio(audioUrl);
+    isUsingSurahLevelAudio.value = true;
+    currentAyahIndex.value = ayahIndex;
+    playingAyahNumber.value = ayah.nomorAyat;
+
+    surahLevelAudio.value.onplay = () => {
+        isFullSurahPlaying.value = true;
+    };
+    surahLevelAudio.value.onpause = () => {
+        isFullSurahPlaying.value = false;
+    };
+    surahLevelAudio.value.onended = () => {
+        isFullSurahPlaying.value = false;
+        stopSurahLevelAudio();
         playingAyahNumber.value = null;
     };
-    
-    audio.onerror = (e) => {
-        console.error('Audio playback error', e);
+    surahLevelAudio.value.onerror = (e) => {
+        console.error('Surah audio playback error', e);
+        isFullSurahPlaying.value = false;
+        stopSurahLevelAudio();
         playingAyahNumber.value = null;
     };
 
-    currentAudio.value = audio;
-    playingAyahNumber.value = ayah.nomorAyat;
-    audio.play().catch((error) => {
+    if (ayahIndex >= 0) {
+        scrollToAyah(ayahIndex);
+    }
+
+    surahLevelAudio.value.play().catch((error) => {
         console.error('Audio play rejected', error);
         playingAyahNumber.value = null;
     });
+};
+
+const playPreviousAyah = () => {
+    if (isUsingSurahLevelAudio.value || currentAyahIndex.value === null || currentAyahIndex.value <= 0) return;
+    quranAudioPlayer.previousAyah();
+};
+
+const playNextAyah = () => {
+    if (!surah.value || isUsingSurahLevelAudio.value || currentAyahIndex.value === null) return;
+    if (currentAyahIndex.value >= surah.value.ayat.length - 1) return;
+    quranAudioPlayer.nextAyah();
+};
+
+const toggleSurahLevelAudioPlayback = () => {
+    if (!surah.value) return;
+
+    const surahAudioUrl = getSurahAudioUrl(surah.value);
+    if (!surahAudioUrl) {
+        console.warn('No surah-level audio found');
+        return;
+    }
+
+    quranAudioPlayer.stop();
+    if (currentAyahIndex.value === null) {
+        currentAyahIndex.value = 0;
+    }
+    if (surah.value.ayat[currentAyahIndex.value]) {
+        playingAyahNumber.value = surah.value.ayat[currentAyahIndex.value].nomorAyat;
+    } else {
+        playingAyahNumber.value = null;
+    }
+    isUsingSurahLevelAudio.value = true;
+
+    if (!surahLevelAudio.value) {
+        surahLevelAudio.value = new Audio(surahAudioUrl);
+
+        surahLevelAudio.value.onplay = () => {
+            isFullSurahPlaying.value = true;
+        };
+        surahLevelAudio.value.onpause = () => {
+            isFullSurahPlaying.value = false;
+        };
+        surahLevelAudio.value.onended = () => {
+            isFullSurahPlaying.value = false;
+            stopSurahLevelAudio();
+        };
+        surahLevelAudio.value.onerror = (e) => {
+            console.error('Surah audio playback error', e);
+            isFullSurahPlaying.value = false;
+            stopSurahLevelAudio();
+        };
+    }
+
+    if (surahLevelAudio.value.paused) {
+        surahLevelAudio.value.play().then(() => {
+            isFullSurahPlaying.value = true;
+        }).catch((error) => {
+            console.error('Failed to play surah-level audio', error);
+            isFullSurahPlaying.value = false;
+        });
+        enableBackgroundAudio();
+    } else {
+        surahLevelAudio.value.pause();
+        isFullSurahPlaying.value = false;
+    }
 };
 
 // Full surah audio controls
 const toggleFullSurahPlay = () => {
     if (!surah.value || !surah.value.ayat.length) return;
 
-    const hasAyahAudio = surah.value.ayat.some((ayah) => !!getAyahAudioUrl(ayah));
+    if (isUsingSurahLevelAudio.value) {
+        toggleSurahLevelAudioPlayback();
+        return;
+    }
+
+    const hasAyahAudio = surah.value.ayat.some((ayah) => !!getAyahAudioUrl(ayah, surah.value!.nomor));
 
     if (!hasAyahAudio) {
-        const surahAudioUrl = getSurahAudioUrl(surah.value);
-        if (!surahAudioUrl) {
-            console.warn('No surah-level audio found');
-            return;
-        }
-
-        // Pause single-ayah audio if active
-        if (currentAudio.value) {
-            currentAudio.value.pause();
-            currentAudio.value = null;
-        }
-        quranAudioPlayer.stop();
-        currentAyahIndex.value = null;
-        playingAyahNumber.value = null;
-
-        if (!surahLevelAudio.value) {
-            surahLevelAudio.value = new Audio(surahAudioUrl);
-            isUsingSurahLevelAudio.value = true;
-
-            surahLevelAudio.value.onplay = () => {
-                isFullSurahPlaying.value = true;
-            };
-            surahLevelAudio.value.onpause = () => {
-                isFullSurahPlaying.value = false;
-            };
-            surahLevelAudio.value.onended = () => {
-                isFullSurahPlaying.value = false;
-                stopSurahLevelAudio();
-            };
-            surahLevelAudio.value.onerror = (e) => {
-                console.error('Surah audio playback error', e);
-                isFullSurahPlaying.value = false;
-                stopSurahLevelAudio();
-            };
-        }
-
-        if (surahLevelAudio.value.paused) {
-            surahLevelAudio.value.play().catch((error) => {
-                console.error('Failed to play surah-level audio', error);
-                isFullSurahPlaying.value = false;
-            });
-            enableBackgroundAudio();
-        } else {
-            surahLevelAudio.value.pause();
-        }
+        toggleSurahLevelAudioPlayback();
         return;
     }
 
@@ -248,12 +345,25 @@ const toggleFullSurahPlay = () => {
     if (isFullSurahPlaying.value) {
         quranAudioPlayer.pause();
     } else {
-        // Start playing from beginning or resume from current position
+        const playerState = quranAudioPlayer.getState();
+        const canResumeCurrentSurah = playerState.currentSurahNumber === surah.value.nomor &&
+            playerState.currentAyahIndex !== null &&
+            !isUsingSurahLevelAudio.value;
+
+        if (canResumeCurrentSurah && !playerState.isPlaying) {
+            const resumeIndex = playerState.currentAyahIndex!;
+            if (surah.value.ayat[resumeIndex]) {
+                playingAyahNumber.value = surah.value.ayat[resumeIndex].nomorAyat;
+            }
+            scrollToAyah(resumeIndex);
+            quranAudioPlayer.resume();
+            enableBackgroundAudio();
+            return;
+        }
+
+        // Resume from current ayah when using control bar play button.
         const startIndex = currentAyahIndex.value !== null ? currentAyahIndex.value : 0;
-        quranAudioPlayer.playSurah(surah.value.ayat, surah.value.nomor, startIndex);
-        
-        // Request audio focus and enable background playback
-        enableBackgroundAudio();
+        startAyahPlayback(startIndex);
     }
 };
 
@@ -265,6 +375,7 @@ const setupAudioPlayer = () => {
         },
         onAyahChange: (ayahIndex: number) => {
             currentAyahIndex.value = ayahIndex;
+            isFullSurahPlaying.value = true;
             // Update individual ayah playing state
             if (surah.value && surah.value.ayat[ayahIndex]) {
                 playingAyahNumber.value = surah.value.ayat[ayahIndex].nomorAyat;
@@ -281,6 +392,8 @@ const setupAudioPlayer = () => {
         onError: (error: string) => {
             console.error('Full surah audio error:', error);
             isFullSurahPlaying.value = false;
+            currentAyahIndex.value = null;
+            playingAyahNumber.value = null;
         },
         onScrollToAyah: (ayahIndex: number) => {
             scrollToAyah(ayahIndex);
@@ -300,9 +413,9 @@ const scrollToAyah = (ayahIndex: number) => {
         });
         
         // Add highlight effect temporarily
-        ayahElement.classList.add('ayah-highlight');
+        ayahElement.classList.add('ayah-scroll-highlight');
         setTimeout(() => {
-            ayahElement.classList.remove('ayah-highlight');
+            ayahElement.classList.remove('ayah-scroll-highlight');
         }, 2000);
     }
 };
@@ -462,10 +575,6 @@ watch(() => route.query.ayah, () => {
 });
 
 onUnmounted(() => {
-    if (currentAudio.value) {
-        currentAudio.value.pause();
-        currentAudio.value = null;
-    }
     quranAudioPlayer.destroy();
     stopSurahLevelAudio();
     
@@ -553,6 +662,11 @@ body.dark .bismillah-img {
     padding: 20px;
     border: 1px solid var(--ion-border-color);
     box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+
+.ayah-block-playing {
+    border-color: rgba(var(--ion-color-primary-rgb), 0.45);
+    box-shadow: 0 0 0 1px rgba(var(--ion-color-primary-rgb), 0.2), 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.12);
 }
 
 .ayah-header {
@@ -666,7 +780,7 @@ body.dark .bismillah-img {
 }
 
 /* Auto-scroll highlight animation */
-.ayah-highlight {
+.ayah-scroll-highlight {
   animation: highlightAyah 2s ease-in-out;
 }
 
