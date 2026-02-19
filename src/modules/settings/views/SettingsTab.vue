@@ -75,7 +75,7 @@
               </div>
               <div class="setting-info">
                 <h3>MuslimHub</h3>
-                <p>{{ $t('settings.app_version', { version: '0.1.0' }) }}</p>
+                <p>{{ $t('settings.app_version', { version: '1.0.1' }) }}</p>
                 <p class="small">{{ $t('settings.app_build_info') }}</p>
               </div>
             </div>

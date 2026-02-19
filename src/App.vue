@@ -16,6 +16,47 @@ const { t } = useI18n();
 const lastBackPress = ref(0);
 let appStateListener: { remove: () => Promise<void> } | null = null;
 
+const ensureNotificationHealth = async (): Promise<boolean> => {
+  try {
+    const { NotificationService } = await import('@/shared/services/notification');
+    const { value: reminderEnabled } = await Preferences.get({ key: 'prayerReminder' });
+    if (reminderEnabled !== 'true') return false;
+
+    const permissionGranted = await NotificationService.requestPermissions();
+    if (!permissionGranted) {
+      console.warn('Notification permission denied');
+      return false;
+    }
+
+    await NotificationService.initializeBackgroundNotifications();
+    await NotificationService.checkExactAlarmPermission();
+    return true;
+  } catch (error) {
+    console.error('Failed to ensure notification health:', error);
+    return false;
+  }
+};
+
+const handleAppUpdateNotificationRecovery = async (): Promise<void> => {
+  try {
+    const appInfo = await App.getInfo();
+    const currentBuild = appInfo.build ?? appInfo.version ?? 'unknown';
+    const { value: lastKnownBuild } = await Preferences.get({ key: 'lastKnownAppBuild' });
+
+    // If build changes, force refresh notifications because some vendors reset alarm/notification state on update.
+    const appUpdated = !!lastKnownBuild && lastKnownBuild !== currentBuild;
+    const canProceed = await ensureNotificationHealth();
+    if (appUpdated && canProceed) {
+      await refreshPrayerNotifications(true);
+      console.log(`Notification recovery executed after app update (${lastKnownBuild} -> ${currentBuild})`);
+    }
+
+    await Preferences.set({ key: 'lastKnownAppBuild', value: currentBuild });
+  } catch (error) {
+    console.error('Failed app update notification recovery:', error);
+  }
+};
+
 const refreshPrayerNotifications = async (force = false) => {
   try {
     const { PrayerTimeService } = await import('@/modules/worship/services/prayer-times');
@@ -88,12 +129,14 @@ onMounted(async () => {
 
   // Initialize background notifications
   try {
-    const { NotificationService } = await import('@/shared/services/notification');
-    await NotificationService.initializeBackgroundNotifications();
-    console.log('Background notifications initialized');
+    await ensureNotificationHealth();
+    console.log('Background notifications health check complete');
   } catch (error) {
     console.error('Failed to initialize background notifications:', error);
   }
+
+  // Force notification recovery after app update (first launch only)
+  await handleAppUpdateNotificationRecovery();
 
   // Refresh prayer notifications when app opens
   await refreshPrayerNotifications(false);

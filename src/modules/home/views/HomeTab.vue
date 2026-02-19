@@ -87,7 +87,7 @@
       </div>
 
       <div class="footer-info ion-padding-bottom ion-text-center">
-        <p>MuslimHub v0.1.0 • {{ $t('home.footer_tagline') }}</p>
+        <p>MuslimHub v1.0.1 • {{ $t('home.footer_tagline') }}</p>
       </div>
     </ion-content>
   </ion-page>
