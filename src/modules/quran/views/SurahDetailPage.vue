@@ -751,7 +751,8 @@ body.dark .bismillah-img {
   bottom: 0;
   left: 0;
   right: 0;
-  background: white;
+  background: var(--ion-card-background);
+  color: var(--ion-text-color);
   border-top: 1px solid var(--ion-border-color);
   padding: 12px 16px;
   display: flex;
@@ -760,6 +761,12 @@ body.dark .bismillah-img {
   gap: 8px;
   z-index: 1000;
   box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+body.dark .audio-controls-bar {
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.45);
 }
 
 .audio-controls {

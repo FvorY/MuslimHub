@@ -1,7 +1,8 @@
 /* Ionic Variables */
 :root {
-    --ion-font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Roboto", sans-serif;
-    --arabic-font: 'Amiri', serif;
+    /* Softer, contemporary Latin + elegant Arabic pairing */
+    --ion-font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+    --arabic-font: 'Scheherazade New', 'Amiri', serif;
 
     /** core mode variables **/
     --ion-background-color: #ffffff;

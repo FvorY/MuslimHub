@@ -271,7 +271,7 @@ onBeforeUnmount(() => {
 
 .arabic-text {
   margin: 0 0 10px;
-  font-family: 'Amiri', serif;
+  font-family: var(--arabic-font);
   font-size: 1.8em;
   text-align: right;
   line-height: 2;
