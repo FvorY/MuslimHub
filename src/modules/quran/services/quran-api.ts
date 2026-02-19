@@ -33,6 +33,74 @@ const sanitizeVerseText = (input: unknown): string => {
         .trim();
 };
 
+const normalizeAudioUrl = (input: unknown): string => {
+    if (typeof input !== 'string') return '';
+
+    const url = input.trim();
+    if (!url) return '';
+
+    if (url.startsWith('//')) {
+        return `https:${url}`;
+    }
+
+    if (url.startsWith('http://')) {
+        return `https://${url.slice('http://'.length)}`;
+    }
+
+    return url;
+};
+
+const normalizeAudioValue = (input: unknown): unknown => {
+    if (typeof input === 'string') {
+        return normalizeAudioUrl(input);
+    }
+
+    if (input && typeof input === 'object') {
+        const record = input as Record<string, unknown>;
+        return Object.fromEntries(
+            Object.entries(record).map(([key, value]) => [key, typeof value === 'string' ? normalizeAudioUrl(value) : value])
+        );
+    }
+
+    return input;
+};
+
+const pickAudioUrlFromObject = (input: Record<string, unknown>): string => {
+    const preferredKeys = ['05', '5', '01', '1', 'url', 'src', 'audio'];
+
+    for (const key of preferredKeys) {
+        const value = normalizeAudioUrl(input[key]);
+        if (value) return value;
+    }
+
+    for (const value of Object.values(input)) {
+        if (typeof value === 'string') {
+            const url = normalizeAudioUrl(value);
+            if (url) return url;
+            continue;
+        }
+
+        if (value && typeof value === 'object') {
+            const nested = pickAudioUrlFromObject(value as Record<string, unknown>);
+            if (nested) return nested;
+        }
+    }
+
+    return '';
+};
+
+const resolveAudioUrl = (input: unknown): string => {
+    if (typeof input === 'string') {
+        return normalizeAudioUrl(input);
+    }
+
+    if (input && typeof input === 'object') {
+        return pickAudioUrlFromObject(input as Record<string, unknown>);
+    }
+
+    return '';
+};
+
 export interface Surah {
     nomor: number;
     nama: string;
@@ -74,7 +142,7 @@ const mapSurah = (raw: Record<string, any>): Surah => ({
     tempatTurun: String(raw.tempat_turun ?? raw.tempatTurun ?? ''),
     arti: String(raw.arti ?? ''),
     deskripsi: sanitizeDescription(raw.deskripsi),
-    audioFull: raw.audio ?? raw.audioFull ?? null,
+    audioFull: normalizeAudioValue(raw.audio ?? raw.audioFull ?? null),
 });
 
 const mapAyah = (raw: Record<string, any>): Ayah => ({
@@ -82,8 +150,12 @@ const mapAyah = (raw: Record<string, any>): Ayah => ({
     teksArab: String(raw.ar ?? raw.teksArab ?? raw.arab ?? ''),
     teksLatin: sanitizeVerseText(raw.tr ?? raw.teksLatin ?? raw.latin ?? ''),
     teksIndonesia: sanitizeVerseText(raw.idn ?? raw.teksIndonesia ?? raw.terjemahan ?? ''),
-    audio: raw.audio ?? null,
+    audio: normalizeAudioValue(raw.audio ?? raw.audioFull ?? null),
 });
+
+export const getAyahAudioUrl = (ayah: Pick<Ayah, 'audio'>): string => resolveAudioUrl(ayah.audio);
+
+export const getSurahAudioUrl = (surah: Pick<Surah, 'audioFull'>): string => resolveAudioUrl(surah.audioFull);
 
 const mapSurahDetail = (raw: Record<string, any>): SurahDetail => {
     const ayatRaw = Array.isArray(raw.ayat) ? raw.ayat : [];

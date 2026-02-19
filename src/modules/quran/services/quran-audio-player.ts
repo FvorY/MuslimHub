@@ -1,4 +1,4 @@
-import { Ayah } from './quran-api';
+import { Ayah, getAyahAudioUrl } from './quran-api';
 import { screenWakeLockService } from '@/shared/services/screen-wake-lock';
 
 export interface AudioPlayerState {
@@ -29,13 +29,7 @@ class QuranAudioPlayer {
 
   // Get audio URL from ayah data (similar to existing logic)
   private getAudioUrl(ayah: Ayah): string {
-    if (typeof ayah.audio === 'string') {
-      return ayah.audio;
-    } else if (typeof ayah.audio === 'object' && ayah.audio !== null) {
-      // Default to '05' (Misyari) or first available key
-      return ayah.audio['05'] || Object.values(ayah.audio)[0] as string;
-    }
-    return '';
+    return getAyahAudioUrl(ayah);
   }
 
   private updateState(updates: Partial<AudioPlayerState>) {
